@@ -1,0 +1,8 @@
+.maincontainer{
+    display: flex;
+    background-color: #2765b014;
+}
+.maincontent{
+    flex: 4 1 0;
+    padding: 1rem;
+}

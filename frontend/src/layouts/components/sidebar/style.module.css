@@ -1,0 +1,9 @@
+.sidebar{
+    flex: 1.2 1 0;
+    padding: 10px;
+    position: sticky;
+    left: 0;
+    align-self: start;
+    top: 55px;
+    
+}
