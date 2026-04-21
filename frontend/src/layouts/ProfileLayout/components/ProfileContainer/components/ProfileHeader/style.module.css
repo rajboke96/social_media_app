@@ -1,0 +1,90 @@
+.centerContainer{
+    display: flex;
+    justify-content: center;
+}
+.summaryContainer{
+    display: flex;
+    justify-content: center;
+    max-width: 75vw;
+    margin-bottom: 1rem;
+}
+.summary{
+    display: flex;
+    width: 75vw;
+    align-items: center;
+    padding: 0px 2rem;
+}
+.profileImage{
+    flex: 1 0 0;
+    display: flex;
+    justify-content: left;
+}
+.profileImage>img{
+    height: 168px;
+    width: 168px;
+    border-radius: 100px;
+}
+.summaryContentContainer{
+    flex: 4 0 0;
+}
+.summaryContent .header{
+    display: flex;
+}
+.summaryContent .userDetail{
+    flex: 1 0 0;
+    flex-direction: column;
+    display: flex;
+}
+.summaryContent .footer ul{
+    display: flex;
+    list-style-type: none;
+    padding: 0;
+}
+.summaryContent .userOptions{
+    flex: 1 0 0;
+    display: flex;
+    justify-content: right;
+}
+.summaryContent .userOptions button{
+    margin-inline-start: 4px;
+}
+.coverpicContainer{
+    display: flex;
+    justify-content: center;
+    margin-bottom: 3rem;
+}
+.coverpic{
+    width: 75vw;
+    height: 50vh;
+    position: relative;
+}
+.coverpic>img{
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    object-position: center;
+    /* border: 1px solid grey; */
+    border-radius: 20px;
+    /* box-shadow: grey 4px 4px; */
+}
+.coverpic button{
+    position: absolute;
+    top: 90%;
+    right: 3%;
+}
+.menuContainer{
+    width: 75vw;
+    display: flex;
+    border-top: 1px solid grey;
+    padding: 0.8em 0em;
+}
+.menu{
+    width: 20vw;
+}
+.menu ul{
+    display: flex;
+    justify-content: space-between;
+    list-style-type: none;
+    padding: 0;
+    margin: 0;
+}

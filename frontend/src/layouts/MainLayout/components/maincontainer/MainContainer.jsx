@@ -1,5 +1,5 @@
 import {Outlet} from "react-router-dom"
-import Sidebar from "../sidebar/Sidebar"
+import Sidebar from "../../../components/sidebar/Sidebar"
 import style from "./style.module.css"
 
 function MainContainer(){
