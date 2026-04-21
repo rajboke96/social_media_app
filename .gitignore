@@ -1,0 +1,10 @@
+__pycache__/
+backend/scripts/
+backend/.venv/
+backend/tests/
+frontend/static/
+frontend/html_designs/
+frontend/assets/
+frontend/public/
+frontend/node_modules/
+
