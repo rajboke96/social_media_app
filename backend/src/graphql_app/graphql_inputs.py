@@ -1,8 +1,14 @@
 import strawberry
+from strawberry import relay
 from typing import List, Optional
-from social_media_app.schemas import AccountType, Gender, Visibility
+from social_media_app.schemas import AccountType, Gender, Visibility, FriendRequestStatus
 from datetime import date
 from strawberry.file_uploads import Upload
+
+@strawberry.input
+class UpdateFriendRequest:
+    friend_id: relay.GlobalID
+    status: FriendRequestStatus
 
 @strawberry.input
 class CreateTokenInput:

@@ -69,8 +69,9 @@ def get_current_user(request: Request, db: Session = Depends(get_db), authorizat
         # raise credentials_exception
         return None
     user = get_user(db, username=token_data.username)
-    print("-----------User: ", User)
+    print("User: ", User)
     if user is None:
         # raise credentials_exception
         return None
+    db.expunge(user)
     return user

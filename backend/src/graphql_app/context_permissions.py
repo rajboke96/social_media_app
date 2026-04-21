@@ -13,7 +13,8 @@ class CustomContext(BaseContext):
     def __init__(self, user: Optional[UserModel], db: Session):
         super().__init__()
         if user:
-            user=UserType(id=user.id, username=user.username, role=user.role.value)
+            # user=UserType(id=user.id, username=user.username, role=user.role.value)
+            pass
         self.user = user
         self.db=db
 

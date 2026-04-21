@@ -19,7 +19,7 @@ def signup(user: SignupFormData)->Optional[User]:
     with contextmanager(get_db)() as db:
         db_user = get_user(db, username=user.username)
         if db_user:
-            return None
+            raise Exception("User already exists!")
         hashed_password = get_password_hash(user.password)
         db_user = User(firstname=user.firstname, username=user.username, hashed_password=hashed_password)
         user_setting=UserSetting(user=db_user)

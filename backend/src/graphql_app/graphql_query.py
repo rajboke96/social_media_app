@@ -1,10 +1,11 @@
 import strawberry
 from typing import List, Optional, Iterable
-from .graphql_nodes import UserNode, UserProfileNode, UserPostNode, UserSettingNode
+from .graphql_nodes import UserNode, UserProfileNode, UserPostNode, UserSettingNode, FriendRequestNode
 from .graphql_types import UserType
 from .context_permissions import IsAuthenticated, IsAdmin
 from datetime import datetime
 from strawberry import relay
+from social_media_app.schemas import UserRole, Friend
 from social_media_app.schemas import User as UserModel, UserProfile, Post
 
 class LazyQuery:
@@ -42,11 +43,11 @@ class Query:
         user = info.context.user
         return UserType(username=user.username, role=user.role)
     
-    @relay.connection(graphql_type=relay.ListConnection[UserNode], max_results=1, permission_classes=[IsAuthenticated])
+    @relay.connection(graphql_type=relay.ListConnection[UserNode], max_results=10, permission_classes=[IsAuthenticated])
     # @strawberry.field(permission_classes=[IsAuthenticated])
     def all_users(self, info: strawberry.Info) -> Iterable[UserNode]:
         db=info.context.db
-        query_obj=db.query(UserModel)
+        query_obj=db.query(UserModel).filter(UserModel.role!=UserRole.ADMIN)
         return LazyQuery(info, query_obj, UserNode.from_db)
  
     # @strawberry.field(permission_classes=[IsAuthenticated])
@@ -73,6 +74,12 @@ class Query:
         query_obj=db.query(Post).filter(Post.created_by==user_id)
         return LazyQuery(info, query_obj, UserPostNode.from_db)
 
+    @relay.connection(graphql_type=relay.ListConnection[FriendRequestNode], max_results=10, permission_classes=[IsAuthenticated])
+    def all_User_friends(self, info: strawberry.Info)->Iterable[FriendRequestNode]:
+        user_id=info.context.user.id
+        db=info.context.db
+        query_obj=db.query(Friend).filter(Friend.user_id==user_id)
+        return LazyQuery(info, query_obj, FriendRequestNode.from_db)
     
     @strawberry.field(permission_classes=[IsAuthenticated])
     def user_settings(self, info: strawberry.Info)->Optional[UserSettingNode]:

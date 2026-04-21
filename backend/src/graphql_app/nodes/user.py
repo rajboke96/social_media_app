@@ -31,6 +31,7 @@ class UserNode(relay.Node):
     def get(info: strawberry.Info, id):
         db=info.context.db
         db_user=db.query(UserModel).filter(UserModel.id==id).first()
+        print("db1", db)
         if db_user:
             return db_user
 
