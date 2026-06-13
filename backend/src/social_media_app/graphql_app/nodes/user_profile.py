@@ -1,7 +1,7 @@
 import strawberry
 from typing import Optional
 from .user import UserNode
-from graphql_app.graphql_types import CityType
+from ..graphql_types import CityType
 from social_media_app.schemas import UserProfile
 from strawberry import relay
 from typing import Iterable, List

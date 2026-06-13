@@ -7,7 +7,6 @@ from typing import Iterable, List
 
 @strawberry.type
 class FriendRequestNode(relay.Node):
-    user: UserNode
     friend: UserNode
     friends_at: datetime
     status: FriendRequestStatus
@@ -42,7 +41,6 @@ class FriendRequestNode(relay.Node):
     @staticmethod
     def from_db(info: strawberry.Info, db_user:Post)->"FriendRequestNode":
         return FriendRequestNode(friends_at=db_user.friends_at,
-            user=UserNode.from_db(info, UserNode.get(info, db_user.user_id)),
             friend=UserNode.from_db(info, UserNode.get(info, db_user.friend_id)),
             status=db_user.status.value
         )

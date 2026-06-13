@@ -19,49 +19,40 @@ logging.getLogger("sqlalchemy.engine").setLevel(logging.INFO)
 #     database='database.db',
 # )
 
-
 class Base(DeclarativeBase):
     pass
-
 
 class FriendRequestStatus(enum.Enum):
     PENDING = "pending"
     ACCEPTED = "accepted"
     REJECTED = "rejected"
 
-
 class AccountType(enum.Enum):
     PRIVATE = "private"
     PUBLIC = "public"
-
 
 class AccountStatus(enum.Enum):
     ACTIVE = "active"
     SUSPENDED = "suspended"
     INACTIVE = "inactive"
 
-
 class Visibility(enum.Enum):
     PRIVATE = "private"
     FRIENDS = "friends"
     PUBLIC = "public"
-
 
 class Gender(enum.Enum):
     MALE = "male"
     FEMALE = "female"
     OTHER = "other"
 
-
 class MediaType(enum.Enum):
     IMAGE = "image"
     VIDEO = "video"
 
-
 class Theme(enum.Enum):
     LIGHT = "light"
     DARK = "dark"
-
 
 class UserRole(enum.Enum):
     ADMIN = "admin"
@@ -87,7 +78,6 @@ post_media = Table(
     Column("post_id", ForeignKey("posts.id"), primary_key=True),
     Column("media_id", ForeignKey("media.id"), primary_key=True),
 )
-
 
 class User(Base):
     __tablename__ = "users"
@@ -120,14 +110,13 @@ class User(Base):
 class UserProfile(Base):
     __tablename__ = "users_profile"
     id = Column(Integer, primary_key=True)
-    user_id = Column(ForeignKey("users.id"))
+    user_id = Column(ForeignKey("users.id"), nullable=False)
     profile_bio = Column(String(300))
     profile_pic_img = Column(ForeignKey("media.id"))
     cover_pic_img = Column(ForeignKey("media.id"))
     city_id = Column(ForeignKey("cities.id"))
     # -------------Relationships-------------
     city: Mapped["City"] = relationship(back_populates="user_profiles")
-
 
 class UserSetting(Base):
     __tablename__ = "users_setting"
@@ -136,7 +125,6 @@ class UserSetting(Base):
     theme: Mapped[Theme] = mapped_column(default=Theme.LIGHT)
     # -------------Relationships-------------
     user: Mapped[User] = relationship(back_populates="setting")
-
 
 class Post(Base):
     __tablename__ = "posts"
@@ -151,7 +139,6 @@ class Post(Base):
     media: Mapped[List["Media"]] = relationship(
         secondary="post_media", back_populates="posts"
     )
-
 
 class Media(Base):
     __tablename__ = "media"
@@ -169,7 +156,6 @@ class Media(Base):
         secondary="post_media", back_populates="media"
     )
 
-
 class Country(Base):
     __tablename__ = "countries"
     id = Column(Integer, primary_key=True)
@@ -177,7 +163,6 @@ class Country(Base):
     country_code = Column(String(5))
     # -------------Relationships-------------
     states: Mapped[List["State"]] = relationship(back_populates="country")
-
 
 class State(Base):
     __tablename__ = "states"
@@ -188,7 +173,6 @@ class State(Base):
     # -------------Relationships-------------
     cities: Mapped[List["City"]] = relationship(back_populates="state")
     country: Mapped[Country] = relationship(back_populates="states")
-
 
 class City(Base):
     __tablename__ = "cities"
@@ -201,5 +185,3 @@ class City(Base):
     user_profiles: Mapped[List["UserProfile"]] = relationship(back_populates="city")
 
 Base.metadata.create_all(engine)
-if __name__ == "__main__":
-    Base.metadata.create_all(engine)

@@ -3,7 +3,8 @@ from fastapi import FastAPI, Depends
 from sqlalchemy.orm import Session
 # from routers import items, users # Import the router modules
 # from auth import routes as auth_routes
-from graphql_app.graphql_app import graphql_router
+from social_media_app.graphql_app.graphql_app import sm_app_router
+from auth_app.graphql_app.graphql_app import auth_router
 from pathlib import Path
 import sys
 from database import get_db
@@ -11,6 +12,10 @@ from social_media_app.schemas import UserRole, User
 from auth_app.utils import get_password_hash
 from contextlib import contextmanager
 from fastapi.middleware.cors import CORSMiddleware
+# from fastapi import FastAPI
+# from starlette.middleware.sessions import SessionMiddleware
+# from auth_app.router import router as auth_router
+import os
 
 ROOT_DIR=Path(__file__).parent.resolve()
 sys.path.append(ROOT_DIR)
@@ -39,8 +44,14 @@ async def create_initial_admin():
             db.add(admin_user)
             db.commit()
 
+# Crucial for OAuth state tracking verification
+# app.add_middleware(SessionMiddleware, secret_key=os.getenv("SECRET_KEY"))
+
+# app.include_router(auth_router, prefix="/auth")
+
 # Add the GraphQL route to FastAPI
-app.include_router(graphql_router, prefix="/graphql")
+app.include_router(sm_app_router, prefix="/app/graphql")
+app.include_router(auth_router, prefix="/auth/graphql")
 # Rest API's Route
 # app.include_router(sm_app_routes.router, prefix="/sm_app", tags=["sm_app"])
 # app.include_router(auth_routes.router, prefix="/auth", tags=["auth"])

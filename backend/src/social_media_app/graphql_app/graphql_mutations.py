@@ -1,50 +1,17 @@
 import strawberry
-from .graphql_inputs import CreateUserInput, CreateTokenInput, UpdateUserInput, UserPostInput, UpdateUserSettingInput, UpdateFriendRequest
+from .graphql_inputs import UpdateUserInput, UserPostInput, UpdateFriendRequest
 from typing import Optional
-from .graphql_nodes import UserNode, UserPostNode, UserSettingNode, FriendRequestNode
-from auth_app.auth import login_for_access_token, signup
-from auth_app.models import LoginFormData, SignupFormData
+from .graphql_nodes import UserNode, UserPostNode, FriendRequestNode
 from database import get_db
 from contextlib import contextmanager
 from .context_permissions import IsAuthenticated
-from social_media_app.schemas import Post, User as UserModel, FriendRequestStatus, Friend
+from social_media_app.schemas import Post, FriendRequestStatus, Friend
 from datetime import datetime
-from fastapi import Response
 from strawberry import relay
 from datetime import date
 
 @strawberry.type
 class Mutation:
-    @strawberry.field
-    # def login(self, data: CreateTokenInput)->Optional[Token]:
-    def login(self, info: strawberry.Info, data: CreateTokenInput)->Optional[str]:
-        login_form=LoginFormData(username=data.username, password=data.password)
-        token=login_for_access_token(form_data=login_form)
-        if token:
-            # return Token(access_token=token.access_token, token_type=token.token_type)
-        
-            # Access the FastAPI Response object from context
-            response: Response = info.context.response
-            
-            # Set the HttpOnly cookie
-            response.set_cookie(
-                key="auth_token",
-                value=token.access_token,
-                httponly=True,
-                secure=False,   # Required for HTTPS (Production)
-                samesite="lax" # Change to "none" if frontend/backend are on different domains
-            )
-            print("Response: ", response)
-            return f"User {data.username} logged in!"
-
-    @strawberry.field
-    def signup(self, info: strawberry.Info, data: CreateUserInput) -> Optional[UserNode]:
-        signup_form=SignupFormData(username=data.username, password=data.password, firstname=data.firstname)
-        db_user=signup(user=signup_form)
-        if db_user:
-            user=UserNode.from_db(info, db_user)
-            return user
-
     # @strawberry.field
     # def update_user_setting(self, info: strawberry.Info, data: UpdateUserSettingInput) -> Optional[UserSetting]:
     #     user_id=info.context.user.id
@@ -98,7 +65,7 @@ class Mutation:
         # return user.save()
 
     @strawberry.field(permission_classes=[IsAuthenticated])
-    async def send_friend_request(self, info: strawberry.Info, user_id: relay.GlobalID) -> Optional[str]:
+    async def create_friend_request(self, info: strawberry.Info, user_id: relay.GlobalID) -> Optional[str]:
         user=info.context.user
         db=info.context.db
 

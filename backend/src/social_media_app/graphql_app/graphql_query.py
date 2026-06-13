@@ -5,8 +5,9 @@ from .graphql_types import UserType
 from .context_permissions import IsAuthenticated, IsAdmin
 from datetime import datetime
 from strawberry import relay
-from social_media_app.schemas import UserRole, Friend
+from social_media_app.schemas import UserRole, Friend, AccountStatus, AccountType, Gender, Visibility, Theme, MediaType
 from social_media_app.schemas import User as UserModel, UserProfile, Post
+from .query_inputs import Option
 
 class LazyQuery:
     def __init__(self, info, query, mapper):
@@ -41,7 +42,7 @@ class Query:
     @strawberry.field(permission_classes=[IsAuthenticated])
     def me(self, info: strawberry.Info) -> UserType:
         user = info.context.user
-        return UserType(username=user.username, role=user.role)
+        return UserType(username=user.username, role=user.role.value)
     
     @relay.connection(graphql_type=relay.ListConnection[UserNode], max_results=10, permission_classes=[IsAuthenticated])
     # @strawberry.field(permission_classes=[IsAuthenticated])
@@ -90,27 +91,25 @@ class Query:
                                user=UserNode.from_db(UserSettingNode.get_user_setting(info, db_user_setting.user_id)) if db_user_setting.user_id else None,
                                theme=db_user_setting.theme.value)
 
-    @strawberry.field
-    def account_status_options(self)->List[str]:
-        return ["active", "suspended", "inactive"]
-    
-    @strawberry.field
-    def visibility_options(self)->List[str]:
-        return ["private", "friends", "public"]
+    @strawberry.field(permission_classes=[IsAuthenticated])
+    def get_feeds_for_user(self, info:strawberry.Info)->None:
+        """
+            feeds -> posts, ad, suggested friends
+            posts -> location, most viewed posts, friends liked posts
+        """
+        pass
 
     @strawberry.field
-    def account_type_options(self)->List[str]:
-        return ["private", "public"]
-    
-    @strawberry.field
-    def gender_options(self)->List[str]:
-        return ["male", "female", "other"]
-    
-    @strawberry.field
-    def media_options(self)->List[str]:
-        return ["image", "video"]
-    
-    @strawberry.field
-    def theme_options(self)->List[str]:
-        return ["light", "dark"]
- 
+    def get_options(self, option: Option)->List[str]:
+        if option == Option.ACCOUNT_STATUS:
+            return AccountStatus._member_names_
+        elif option == Option.ACCOUNT_TYPE:
+            return AccountType._member_names_
+        elif option == Option.VISIBILITY:
+            return Visibility._member_names_
+        elif option == Option.GENDER:
+            return Gender._member_names_
+        elif option == Option.THEME:
+            return Theme._member_names_
+        elif option == Option.MEDIA_TYPE:
+            return MediaType._member_names_

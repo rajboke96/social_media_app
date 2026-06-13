@@ -11,23 +11,6 @@ class UpdateFriendRequest:
     status: FriendRequestStatus
 
 @strawberry.input
-class CreateTokenInput:
-    username:str
-    password:str
-
-@strawberry.input
-class CreateUserInput:
-    firstname:str
-    middlename:Optional[str]=None
-    Lastname:Optional[str]=None
-    dob:Optional[str]=None
-    gender:Optional[Gender]=None
-    username:str
-    password:str
-    email_address:Optional[str]=None
-    # account_type: AccountType
-
-@strawberry.input
 class UpdateUserSettingInput:
     theme: Optional[str] = strawberry.UNSET
 
