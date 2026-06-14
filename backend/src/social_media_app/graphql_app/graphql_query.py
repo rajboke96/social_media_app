@@ -86,10 +86,12 @@ class Query:
     def user_settings(self, info: strawberry.Info)->Optional[UserSettingNode]:
         user_id=info.context.user.id
         db_user_setting=UserSettingNode.get_user_setting(info, user_id)
+        print("db_user_setting------>", db_user_setting)
         if db_user_setting:
             return UserSettingNode(id=db_user_setting.id,
-                               user=UserNode.from_db(UserSettingNode.get_user_setting(info, db_user_setting.user_id)) if db_user_setting.user_id else None,
-                               theme=db_user_setting.theme.value)
+                               user=UserNode.from_db(info, db_user=UserNode.get(info, db_user_setting.user_id) if db_user_setting.user_id else None,
+                               ), theme=db_user_setting.theme.value
+            )
 
     @strawberry.field(permission_classes=[IsAuthenticated])
     def get_feeds_for_user(self, info:strawberry.Info)->None:

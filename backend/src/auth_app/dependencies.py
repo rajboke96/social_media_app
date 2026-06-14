@@ -1,6 +1,6 @@
 from jose import JWTError, jwt
 from sqlalchemy.orm import Session
-from .utils import verify_password, get_password_hash, create_access_token, SECRET_KEY, ALGORITHM
+from .security import verify_password, get_password_hash, create_access_token, SECRET_KEY, ALGORITHM
 from .models import TokenData
 from social_media_app.schemas import User
 from database import SessionLocal

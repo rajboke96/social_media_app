@@ -1,6 +1,6 @@
 import strawberry
 from typing import Optional
-from auth_app.auth import login_for_access_token, signup
+from auth_app.service import login_for_access_token, signup
 from auth_app.models import LoginFormData, SignupFormData
 from fastapi import Response
 from .graphql_inputs import CreateTokenInput, CreateUserInput

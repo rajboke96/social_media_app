@@ -58,6 +58,9 @@ class UserRole(enum.Enum):
     ADMIN = "admin"
     CUSTOMER = "customer"
 
+class OauthProviderType(enum.Enum):
+    GOOGLE="google"
+
 class Friend(Base):
     __tablename__ = "friends"
     user_id: Mapped[int] = mapped_column(ForeignKey("users.id"), primary_key=True)
@@ -90,7 +93,9 @@ class User(Base):
     username = Column(String(50), unique=True, nullable=False)
     email_address = Column(String(100), unique=True)
     email_verified: Mapped[bool] = mapped_column(Boolean, default=False)
-    hashed_password = Column(String(200), nullable=False)
+    hashed_password = Column(String(200))
+    oauth_provider: Mapped[Optional[OauthProviderType]]
+    oauth_id=Column(String(200))
     account_type: Mapped[AccountType] = mapped_column(default=AccountType.PRIVATE)
     account_status: Mapped[AccountStatus] = mapped_column(default=AccountStatus.ACTIVE)
     created_at = Column(DateTime)
@@ -116,6 +121,13 @@ class UserProfile(Base):
     cover_pic_img = Column(ForeignKey("media.id"))
     city_id = Column(ForeignKey("cities.id"))
     # -------------Relationships-------------
+    # Explicitly specify foreign_keys to resolve target ambiguity
+    profile_picture: Mapped["Media"] = relationship(
+        "Media", foreign_keys=[profile_pic_img]
+    )
+    cover_picture: Mapped["Media"] = relationship(
+        "Media", foreign_keys=[cover_pic_img]
+    )
     city: Mapped["City"] = relationship(back_populates="user_profiles")
 
 class UserSetting(Base):
