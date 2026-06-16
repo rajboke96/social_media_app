@@ -4,6 +4,7 @@ from datetime import datetime
 from social_media_app.schemas import Visibility, Post, Friend, FriendRequestStatus
 from strawberry import relay
 from typing import Iterable, List
+from sqlalchemy import select
 
 @strawberry.type
 class FriendRequestNode(relay.Node):
@@ -17,7 +18,7 @@ class FriendRequestNode(relay.Node):
         return f"{self.user.id}:{self.friend.id}"
 
     @classmethod
-    def resolve_nodes(
+    async def resolve_nodes(
         cls, *, info: strawberry.Info, node_ids: Iterable[str], required: bool = False
     ) -> List["FriendRequestNode"]:
         # This method is called when refetching via the 'node' query
@@ -25,17 +26,19 @@ class FriendRequestNode(relay.Node):
         results = []
         for nid in node_ids:
             uid, fid = nid.split(":")
-            data = FriendRequestNode.get(info, nid)
+            data = await FriendRequestNode.get(info, nid)
             if data:
                 results.append(FriendRequestNode.from_db(info, data))
         return results
 
     @staticmethod
-    def get(info: strawberry.Info, nid):
+    async def get(info: strawberry.Info, nid):
         uid, fid = nid.split(":")
-        db=info.context.db
-        db_user=db.query(Friend).filter(Friend.user_id==uid, Friend.friend_id==fid).first()
-        if db_user:
+        db_factory=info.context.db_factory
+        async with db_factory() as db:
+            statement=select(Friend).where(Friend.user_id==uid, Friend.friend_id==fid)
+            result=await db.execute(statement)
+            db_user=result.scalar_one_or_none()
             return db_user
     
     @staticmethod

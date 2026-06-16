@@ -4,7 +4,7 @@ from sqlalchemy.orm import Session
 # from routers import items, users # Import the router modules
 # from auth import routes as auth_routes
 from social_media_app.graphql_app.graphql_app import sm_app_router
-from auth_app.graphql_app.graphql_app import auth_router
+from auth_app.graphql_app.graphql_app import graphql_auth_router
 from pathlib import Path
 import sys
 from database import get_db
@@ -18,11 +18,26 @@ from fastapi.middleware.cors import CORSMiddleware
 import os
 from starlette.middleware.sessions import SessionMiddleware
 from auth_app.router import router as auth_router
+from database import engine
+from contextlib import asynccontextmanager
+from social_media_app.schemas import Base
 
 ROOT_DIR=Path(__file__).parent.resolve()
 sys.path.append(ROOT_DIR)
 
-app = FastAPI()
+# 5. Application Lifespan Manager (Global Lifecycle)
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    # Setup: Create tables if they do not exist (Optional: better to use Alembic)
+    async with engine.begin() as conn:
+        await conn.run_sync(Base.metadata.create_all)
+    yield
+    # Teardown: Safely shut down connection pools on exit
+    await engine.dispose()
+
+app = FastAPI(lifespan=lifespan)
+
+# app = FastAPI()
 
 # Allowed origins
 origins = ["http://127.0.0.1:5173"]
@@ -52,7 +67,7 @@ async def create_initial_admin():
             db.commit()
 
 app.include_router(sm_app_router, prefix="/app/graphql")
-app.include_router(auth_router, prefix="/auth/graphql")
+app.include_router(graphql_auth_router, prefix="/auth/graphql")
 
 app.include_router(auth_router, prefix="/auth")
 

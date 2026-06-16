@@ -8,30 +8,9 @@ from strawberry import relay
 from social_media_app.schemas import UserRole, Friend, AccountStatus, AccountType, Gender, Visibility, Theme, MediaType
 from social_media_app.schemas import User as UserModel, UserProfile, Post
 from .query_inputs import Option
-
-class LazyQuery:
-    def __init__(self, info, query, mapper):
-        self.info=info
-        self.query = query
-        self.mapper=mapper
-
-    def __getitem__(self, key: slice):
-        print("__getitem__ is called!")
-        print("Key: ", key)
-        # Translates [0:10] into .slice(0, 10) for the DB
-        if isinstance(key, slice):
-            results = self.query.slice(key.start, key.stop).all()
-            # Map ORM models to GraphQL Types here
-            res= [self.mapper(self.info, u) for u in results]
-            return res
-        raise TypeError("Slicing only")
-
-    def __iter__(self):
-        print("__iter__ is called!")
-        raise Exception("Error in pagination!")
-        # for row in self.query:
-        #     print("Row - ", self.mapper(self.info, row))
-        #     yield self.mapper(self.info, row)
+from sqlalchemy import select, func
+from typing import List
+from .helper import decode_cursor_to_offset
 
 # 3. Define the Query Class (Read Operations)
 @strawberry.type
@@ -44,52 +23,148 @@ class Query:
         user = info.context.user
         return UserType(username=user.username, role=user.role.value)
     
-    @relay.connection(graphql_type=relay.ListConnection[UserNode], max_results=10, permission_classes=[IsAuthenticated])
+    # @relay.connection(graphql_type=relay.ListConnection[UserNode], max_results=10, permission_classes=[IsAuthenticated])
+    @strawberry.field(permission_classes=[IsAuthenticated])
     # @strawberry.field(permission_classes=[IsAuthenticated])
-    def all_users(self, info: strawberry.Info) -> Iterable[UserNode]:
+    async def UserConnection(self, info: strawberry.Info, first: Optional[int] = 10, after: Optional[str] = None) -> relay.ListConnection[UserNode]:
         db=info.context.db
-        query_obj=db.query(UserModel).filter(UserModel.role!=UserRole.ADMIN)
-        return LazyQuery(info, query_obj, UserNode.from_db)
- 
+        db_factory=info.context.db_factory
+        async with db_factory() as db:
+            # 2. Map Relay's cursor metadata into clean SQL bounds
+            sql_offset = decode_cursor_to_offset(after)
+            sql_limit = min(first, 50) if first else 10  # Protection ceiling
+        
+            # 3. Compile your database statement cleanly
+            statement = (
+                select(UserModel)
+                .where(UserModel.role != UserRole.ADMIN)
+                .order_by(UserModel.id.asc())  # Consistent sorting is mandatory
+                .offset(sql_offset)
+                .limit(sql_limit)
+            )
+            # 4. Await the DB result asynchronously over the network loop
+            result = await db.execute(statement)
+            users = result.scalars().all()
+            
+            nodes = [UserNode.from_db(info, user) for user in users]
+            return relay.ListConnection.resolve_connection(
+                nodes=nodes,
+                info=info,
+                after=after,
+                first=first
+            )
+    
     # @strawberry.field(permission_classes=[IsAuthenticated])
     def search_user(self, user_search_str: str) -> List[UserNode]:
         pass
     
-    @relay.connection(graphql_type=relay.ListConnection[UserProfileNode], max_results=10, permission_classes=[IsAuthenticated])
-    def all_users_profile(self, info: strawberry.Info) -> Iterable[UserProfileNode]:
+    # @relay.connection(graphql_type=relay.ListConnection[UserProfileNode], max_results=10, permission_classes=[IsAuthenticated])
+    @strawberry.field(permission_classes=[IsAuthenticated])
+    async def usersProfileConnection(self, info: strawberry.Info, first: Optional[int] = 10, after: Optional[str] = None) -> List[UserProfileNode]:
         db=info.context.db
-        query_obj=db.query(UserProfile)
-        return LazyQuery(info, query_obj, UserProfileNode.from_db)
-    
-    @relay.connection(graphql_type=relay.ListConnection[UserProfileNode], max_results=10, permission_classes=[IsAuthenticated])
-    def user_profile(self, info: strawberry.Info) -> Iterable[UserProfileNode]:
-        user_id=info.context.user.id
-        db=info.context.db
-        query_obj=db.query(UserProfile).filter(UserProfile.user_id==user_id)
-        return LazyQuery(query_obj, UserProfileNode.from_db)
-    
-    @relay.connection(graphql_type=relay.ListConnection[UserPostNode], max_results=10, permission_classes=[IsAuthenticated])
-    def all_User_posts(self, info: strawberry.Info)->Iterable[UserPostNode]:
-        user_id=info.context.user.id
-        db=info.context.db
-        query_obj=db.query(Post).filter(Post.created_by==user_id)
-        return LazyQuery(info, query_obj, UserPostNode.from_db)
 
-    @relay.connection(graphql_type=relay.ListConnection[FriendRequestNode], max_results=10, permission_classes=[IsAuthenticated])
-    def all_User_friends(self, info: strawberry.Info)->Iterable[FriendRequestNode]:
+        # 2. Map Relay's cursor metadata into clean SQL bounds
+        sql_offset = decode_cursor_to_offset(after)
+        sql_limit = min(first, 50) if first else 10  # Protection ceiling
+    
+        # 3. Compile your database statement cleanly
+        statement = (
+            select(UserProfile)
+            .offset(sql_offset)
+            .limit(sql_limit)
+        )
+        # 4. Await the DB result asynchronously over the network loop
+        result = await db.execute(statement)
+        users_profile = result.scalars().all()
+
+        nodes = [UserProfileNode.from_db(info, profile) for profile in users_profile]
+        return relay.ListConnection.resolve_connection(
+            nodes=nodes,
+            info=info,
+            after=after,
+            first=first
+        )
+
+    @strawberry.field(permission_classes=[IsAuthenticated])    
+    async def user_profile(self, info: strawberry.Info) -> Optional[UserProfileNode]:
+        user_id=info.context.user.id
+        db_factory=info.context.db_factory
+        async with db_factory() as db:
+            statement=select(UserProfile).where(UserProfile.user_id==user_id)
+            result=await db.execute(statement)
+            user_profile=result.scalar_one_or_none()
+            return user_profile
+    
+    # @relay.connection(graphql_type=relay.ListConnection[UserPostNode], max_results=10, permission_classes=[IsAuthenticated])
+    @strawberry.field(permission_classes=[IsAuthenticated])
+    async def UsersPostConnection(self, info: strawberry.Info, first: Optional[int] = 10, after: Optional[str] = None)->relay.ListConnection[UserPostNode]:
         user_id=info.context.user.id
         db=info.context.db
-        query_obj=db.query(Friend).filter(Friend.user_id==user_id)
-        return LazyQuery(info, query_obj, FriendRequestNode.from_db)
+
+        db_factory = info.context.db_factory
+        async with db_factory() as db:
+            # 2. Map Relay's cursor metadata into clean SQL bounds
+            sql_offset = decode_cursor_to_offset(after)
+            sql_limit = min(first, 50) if first else 10  # Protection ceiling
+        
+            # 3. Compile your database statement cleanly
+            statement = (
+                select(Post)
+                .where(Post.created_by==user_id)
+                .offset(sql_offset)
+                .limit(sql_limit)
+            )
+
+            # 4. Await the DB result asynchronously over the network loop
+            result = await db.execute(statement)
+            user_posts = result.scalars().all()
+            
+            nodes = [UserPostNode.from_db(post) for post in user_posts]
+            # 7. CRITICAL FIX: Hand-deliver a pre-calculated connection package
+            # This prevents Strawberry from triggering background database tasks
+            return relay.ListConnection.resolve_connection(
+                nodes=nodes,
+                info=info,
+                after=after,
+                first=first
+            )
+
+    # @relay.connection(graphql_type=relay.ListConnection[FriendRequestNode], max_results=10, permission_classes=[IsAuthenticated])
+    @strawberry.field(permission_classes=[IsAuthenticated])
+    async def UserFriendsConnection(self, info: strawberry.Info, first: Optional[int] = 10, after: Optional[str] = None)->relay.ListConnection[FriendRequestNode]:
+        user_id=info.context.user.id
+        db=info.context.db
+        db_factory=info.context.db_factory
+        async with db_factory() as db:
+            sql_offset = decode_cursor_to_offset(after)
+            sql_limit = min(first, 50) if first else 10  # Protection ceiling
+            statement = (
+                select(Friend)
+                .where(Friend.user_id==user_id)
+                .offset(sql_offset)
+                .limit(sql_limit)
+            )
+            # 4. Await the DB result asynchronously over the network loop
+            result = await db.execute(statement)
+            user_posts = result.scalars().all()
+            
+            nodes = [UserPostNode.from_db(post) for post in user_posts]
+            # 7. CRITICAL FIX: Hand-deliver a pre-calculated connection package
+            # This prevents Strawberry from triggering background database tasks
+            return relay.ListConnection.resolve_connection(
+                nodes=nodes,
+                info=info,
+                after=after,
+                first=first
+            )
     
     @strawberry.field(permission_classes=[IsAuthenticated])
-    def user_settings(self, info: strawberry.Info)->Optional[UserSettingNode]:
+    async def user_settings(self, info: strawberry.Info)->Optional[UserSettingNode]:
         user_id=info.context.user.id
-        db_user_setting=UserSettingNode.get_user_setting(info, user_id)
-        print("db_user_setting------>", db_user_setting)
+        db_user_setting=await UserSettingNode.get(info, user_id)
         if db_user_setting:
             return UserSettingNode(id=db_user_setting.id,
-                               user=UserNode.from_db(info, db_user=UserNode.get(info, db_user_setting.user_id) if db_user_setting.user_id else None,
+                               user=UserNode.from_db(info, db_user=await UserNode.get(info, db_user_setting.user_id) if db_user_setting.user_id else None,
                                ), theme=db_user_setting.theme.value
             )
 

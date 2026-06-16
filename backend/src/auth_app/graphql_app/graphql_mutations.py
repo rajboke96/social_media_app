@@ -9,9 +9,11 @@ from .context_permissions import IsAuthenticated
 @strawberry.type
 class Mutation:
     @strawberry.field
-    def login(self, info: strawberry.Info, data: CreateTokenInput)->Optional[str]:
+    async def login(self, info: strawberry.Info, data: CreateTokenInput)->Optional[str]:
         login_form=LoginFormData(username=data.username, password=data.password)
-        token=login_for_access_token(form_data=login_form)
+        
+        async with info.context.db_factory() as db:
+            token=await login_for_access_token(db, form_data=login_form)
         if token:
             # Access the FastAPI Response object from context
             response: Response = info.context.response
@@ -28,11 +30,12 @@ class Mutation:
             return f"User {data.username} logged in!"
 
     @strawberry.field
-    def signup(self, info: strawberry.Info, data: CreateUserInput) -> Optional[str]:
+    async def signup(self, info: strawberry.Info, data: CreateUserInput) -> Optional[str]:
         signup_form=SignupFormData(username=data.username, password=data.password, firstname=data.firstname)
-        db_user=signup(user=signup_form)
-        if db_user:
-            return "User registered successfull!"
+        async with info.context.db_factory() as db:
+            db_user=await signup(db, user=signup_form)
+            if db_user:
+                return "User registered successfull!"
         
     @strawberry.field(permission_classes=[IsAuthenticated])
     def logout(self, info: strawberry.Info) -> str:

@@ -4,7 +4,6 @@ from starlette.config import Config
 
 # Load variables directly from the environment file
 config = Config("auth_app/.env")
-print("oauth config------->", config.get("GOOGLE_CLIENT_ID"))
 oauth = OAuth(config)
 
 # Register Google OpenID Connect configuration

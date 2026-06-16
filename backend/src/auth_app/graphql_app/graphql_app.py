@@ -12,6 +12,6 @@ class Query:
 # 4. Create the Schema
 schema = strawberry.Schema(query=Query, mutation=Mutation)
 
-auth_router = GraphQLRouter(schema, context_getter=get_context, 
+graphql_auth_router = GraphQLRouter(schema, context_getter=get_context, 
                             multipart_uploads_enabled=True # Mandatory for file inputs
                             )

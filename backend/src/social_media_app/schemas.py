@@ -196,4 +196,4 @@ class City(Base):
     state: Mapped[State] = relationship(back_populates="cities")
     user_profiles: Mapped[List["UserProfile"]] = relationship(back_populates="city")
 
-Base.metadata.create_all(engine)
+# Base.metadata.create_all(engine)

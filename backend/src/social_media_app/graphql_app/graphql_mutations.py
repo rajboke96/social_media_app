@@ -2,7 +2,7 @@ import strawberry
 from .graphql_inputs import UpdateUserInput, UserPostInput, UpdateFriendRequest
 from typing import Optional
 from .graphql_nodes import UserNode, UserPostNode, FriendRequestNode
-from database import get_db
+from database import get_db, get_db_factory
 from contextlib import contextmanager
 from .context_permissions import IsAuthenticated
 from social_media_app.schemas import Post, FriendRequestStatus, Friend
@@ -26,7 +26,7 @@ class Mutation:
     #                            theme=db_user_setting.theme.value)
 
     @strawberry.field(permission_classes=[IsAuthenticated])
-    def create_post(self, info: strawberry.Info, data: UserPostInput)->Optional[UserPostNode]:
+    async def create_post(self, info: strawberry.Info, data: UserPostInput)->Optional[UserPostNode]:
         user_id=info.context.user.id
         user_post=Post(title=data.title,
             description=data.description,
@@ -34,16 +34,16 @@ class Mutation:
             created_at=datetime.now(),
             visibility=data.visibility
             )
-        with contextmanager(get_db)() as db:
+        async with info.context.db_factory() as db:
             db.add(user_post)
-            db.commit()
+            await db.commit()
             return UserPostNode.from_db(info, user_post)
 
     @strawberry.field
-    def update_user(self, info: strawberry.Info, data: UpdateUserInput) -> Optional[UserNode]:
+    async def update_user(self, info: strawberry.Info, data: UpdateUserInput) -> Optional[UserNode]:
         # 1. Fetch existing user from your database
         user_id=info.context.user.id
-        user = UserNode.get(user_id)
+        user = await UserNode.get(user_id)
         
         # 2. Only update if the field is NOT UNSET
         if data.firstname is not strawberry.UNSET:
@@ -56,13 +56,10 @@ class Mutation:
             user.account_type = data.account_type # Could be a string or None
         if data.dob is not strawberry.UNSET:
             user.dob = data.dob # Could be a string or None
-        with contextmanager(get_db)() as db:
+        async with get_db_factory() as db:
             db.add(user)
-            db.commit()
+            await db.commit()
             return UserNode.from_db(user)
-        
-        # 3. Save and return
-        # return user.save()
 
     @strawberry.field(permission_classes=[IsAuthenticated])
     async def create_friend_request(self, info: strawberry.Info, user_id: relay.GlobalID) -> Optional[str]:
@@ -80,20 +77,22 @@ class Mutation:
             friends_at=date.today()              # Setting the date value
         )
         db.add(new_friendship)
-        db.commit()
+        await db.commit()
 
     @strawberry.field(permission_classes=[IsAuthenticated])
     async def update_friend_request(self, info: strawberry.Info, data: UpdateFriendRequest) -> Optional[str]:
         # 1. Fetch existing user from your database
         user=info.context.user
-        db=info.context.db
-        # user=db.query(UserModel).filter(UserModel.id==user.id).first()
-        friend_id=data.friend_id
-        print("GlobalID - ", friend_id.node_id)
-        friend_req_node=await friend_id.resolve_node(info)
-        # print("Resolved Node: ", friend_req_node.user, friend_req_node.friend)
-        friend_req=FriendRequestNode.get(info, friend_req_node.resolve_id(info))
-        friend_req.status=data.status
-        print("db friend request object: ", friend_req)
-        db.add(friend_req)
-        db.commit()
+        db_factory=info.context.db_factory
+        async with db_factory() as db:
+            # user=db.query(UserModel).filter(UserModel.id==user.id).first()
+            friend_id=data.friend_id
+            print("GlobalID - ", friend_id.node_id)
+            friend_req_node=await friend_id.resolve_node(info)
+            # print("Resolved Node: ", friend_req_node.user, friend_req_node.friend)
+            friend_req=await FriendRequestNode.get(info, friend_req_node.resolve_id(info))
+            friend_req.status=data.status
+            print("db friend request object: ", friend_req)
+            db.add(friend_req)
+            await db.commit()
+        

@@ -3,6 +3,7 @@ from .user import UserNode
 from social_media_app.schemas import UserSetting
 from strawberry import relay
 from typing import Iterable, List
+from sqlalchemy import select
 
 @strawberry.type
 class UserSettingNode(relay.Node):
@@ -11,20 +12,23 @@ class UserSettingNode(relay.Node):
     theme: str
 
     @classmethod
-    def resolve_nodes(
+    async def resolve_nodes(
         cls, *, info: strawberry.Info, node_ids: Iterable[str], required: bool = False
     ) -> List["UserSettingNode"]:
         # This method is called when refetching via the 'node' query
         # Strawberry automatically decodes the Base64 IDs back to 'int' node_ids
         results = []
         for nid in node_ids:
-            data = UserSettingNode.get(info, int(nid))
+            data = await UserSettingNode.get(info, int(nid))
             if data:
                 results.append(UserSettingNode.from_db(data))
         return results
 
     @staticmethod
-    def get_user_setting(info: strawberry.Info, user_id):
-        db=info.context.db
-        db_user_posts=db.query(UserSetting).filter(UserSetting.user_id==user_id).first()
-        return db_user_posts
+    async def get(info: strawberry.Info, user_id):
+        db_factory=info.context.db_factory
+        async with db_factory() as db:
+            statement=select(UserSetting).where(UserSetting.id==user_id)
+            result=await db.execute(statement)
+            user_setting = result.scalar_one_or_none()
+            return user_setting

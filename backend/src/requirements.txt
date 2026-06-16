@@ -1,5 +1,6 @@
 SQLAlchemy
-mysql-connector-python
+# mysql-connector-python
+aiomysql
 fastapi
 uvicorn
 strawberry-graphql[cli]

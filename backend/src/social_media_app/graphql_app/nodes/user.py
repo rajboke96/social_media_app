@@ -1,9 +1,8 @@
 import strawberry
 from social_media_app.schemas import User as UserModel
-from typing import Optional, List, Iterable
-from datetime import datetime
+from typing import List, Iterable
 from strawberry import relay
-from sqlalchemy.orm import Session
+from sqlalchemy import select
 
 @strawberry.type
 class UserNode(relay.Node):
@@ -15,24 +14,25 @@ class UserNode(relay.Node):
     account_status: str
 
     @classmethod
-    def resolve_nodes(
+    async def resolve_nodes(
         cls, *, info: strawberry.Info, node_ids: Iterable[str], required: bool = False
     ) -> List["UserNode"]:
         # This method is called when refetching via the 'node' query
         # Strawberry automatically decodes the Base64 IDs back to 'int' node_ids
         results = []
         for nid in node_ids:
-            data = UserNode.get(info, int(nid))
+            data = await UserNode.get(info, int(nid))
             if data:
                 results.append(UserNode.from_db(info, data))
         return results
     
     @staticmethod
-    def get(info: strawberry.Info, id):
-        db=info.context.db
-        db_user=db.query(UserModel).filter(UserModel.id==id).first()
-        print("db1", db)
-        if db_user:
+    async def get(info: strawberry.Info, id):
+        db_factory=info.context.db_factory
+        async with db_factory() as db:
+            statement=select(UserModel).where(UserModel.id==id)
+            result=await db.execute(statement)
+            db_user=result.scalar_one_or_none()
             return db_user
 
     @staticmethod
