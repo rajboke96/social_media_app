@@ -5,39 +5,71 @@ from .graphql_nodes import UserNode, UserPostNode, FriendRequestNode
 from database import get_db, get_db_factory
 from contextlib import contextmanager
 from .context_permissions import IsAuthenticated
-from social_media_app.schemas import Post, FriendRequestStatus, Friend
+from social_media_app.schemas import Post, FriendRequestStatus, Friend, Media, MediaType
 from datetime import datetime
 from strawberry import relay
 from datetime import date
+import os
+from database import UPLOAD_DIR
+import uuid
 
 @strawberry.type
 class Mutation:
-    # @strawberry.field
-    # def update_user_setting(self, info: strawberry.Info, data: UpdateUserSettingInput) -> Optional[UserSetting]:
-    #     user_id=info.context.user.id
-    #     db_user_setting=get_user_setting(user_id)
-    #     if data.theme is not strawberry.UNSET:
-    #         db_user_setting.theme=data.theme
-    #     with contextmanager(get_db)() as db:
-    #         db.add(db_user_setting)
-    #         db.commit()
-    #         return UserSettingNode(id=db_user_setting.id,
-    #                            user=User.from_db(get_user_by_id(db_user_setting.user_id)),
-    #                            theme=db_user_setting.theme.value)
-
     @strawberry.field(permission_classes=[IsAuthenticated])
     async def create_post(self, info: strawberry.Info, data: UserPostInput)->Optional[UserPostNode]:
         user_id=info.context.user.id
-        user_post=Post(title=data.title,
-            description=data.description,
-            created_by=user_id,
-            created_at=datetime.now(),
-            visibility=data.visibility
-            )
+        
+        # 1. Validate File Format
+        allowed_types = ["image/jpeg", "image/png", "image/webp"]
+        print("content_type---->", data.image.content_type)
+        if data.image.content_type not in allowed_types:
+            raise Exception("Invalid file format. Upload JPEG, PNG, or WebP only.")
+            
+        # 2. Ensure Asset Directory Exists
+        os.makedirs(UPLOAD_DIR, exist_ok=True)
+        # 3. Generate a safe unique file name using UUID
+        file_extension = os.path.splitext(data.image.filename)[1]
+        unique_filename = f"{uuid.uuid4().hex}{file_extension}"
+        file_save_path = os.path.join(UPLOAD_DIR, unique_filename)
+        
+        # 4. Stream and write the file asynchronously
+        contents = await data.image.read()
+        with open(file_save_path, "wb") as f:
+            f.write(contents)
+        # 5. Formulate web-accessible URL path
+        public_image_url = f"/static/uploads/{unique_filename}"
+        
         async with info.context.db_factory() as db:
-            db.add(user_post)
-            await db.commit()
-            return UserPostNode.from_db(info, user_post)
+            try:
+                # 6. Database Async Entry
+                new_post=Post(title=data.title,
+                description=data.description,
+                # created_by=user_id,
+                created_at=datetime.now(),
+                visibility=data.visibility,
+                )
+                media=Media(
+                    name = data.image.filename,
+                    alt = data.alt,
+                    type=MediaType.IMAGE,
+                    uploaded_at = datetime.now(),
+                    uploaded_to = file_save_path,
+                    public_image_url=public_image_url
+                )
+                media.user=info.context.user
+                new_post.user=info.context.user
+                new_post.media.append(media)
+                db.add(new_post)
+                await db.commit()
+                # await db.refresh(new_post)
+                print("new_post media---->", new_post.media)
+                return await UserPostNode.from_db(info, new_post)
+            except Exception as e:
+                # Rollback and clean up local file if the SQL execution fails
+                await db.rollback()
+                if os.path.exists(file_save_path):
+                    os.remove(file_save_path)
+                raise Exception(f"Database error: {str(e)}")
 
     @strawberry.field
     async def update_user(self, info: strawberry.Info, data: UpdateUserInput) -> Optional[UserNode]:

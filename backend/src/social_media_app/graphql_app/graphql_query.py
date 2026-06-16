@@ -11,6 +11,7 @@ from .query_inputs import Option
 from sqlalchemy import select, func
 from typing import List
 from .helper import decode_cursor_to_offset
+from sqlalchemy.orm import selectinload
 
 # 3. Define the Query Class (Read Operations)
 @strawberry.type
@@ -111,6 +112,7 @@ class Query:
             statement = (
                 select(Post)
                 .where(Post.created_by==user_id)
+                .options(selectinload(Post.user), selectinload(Post.media))
                 .offset(sql_offset)
                 .limit(sql_limit)
             )
@@ -119,7 +121,7 @@ class Query:
             result = await db.execute(statement)
             user_posts = result.scalars().all()
             
-            nodes = [UserPostNode.from_db(post) for post in user_posts]
+            nodes = [await UserPostNode.from_db(info, post) for post in user_posts]
             # 7. CRITICAL FIX: Hand-deliver a pre-calculated connection package
             # This prevents Strawberry from triggering background database tasks
             return relay.ListConnection.resolve_connection(

@@ -1,23 +1,13 @@
 from sqlalchemy import Column, Integer, Boolean, String, Date, Table
-from sqlalchemy import ForeignKey, DateTime, Enum
+from sqlalchemy import ForeignKey, DateTime
 from sqlalchemy.orm import DeclarativeBase, Mapped, relationship, mapped_column
 from typing import List, Optional
 import logging
 import enum
 from datetime import date
 
-from database import engine
-
-# from database import engine
-
 logging.basicConfig()
 logging.getLogger("sqlalchemy.engine").setLevel(logging.INFO)
-# Then create your engine as usual (echo=False or omit)
-
-# url_object = URL.create(
-#     'sqlite',
-#     database='database.db',
-# )
 
 class Base(DeclarativeBase):
     pass
@@ -105,6 +95,7 @@ class User(Base):
         primaryjoin="User.id == Friend.user_id",
         back_populates="user"
     )
+    user_profile: Mapped["UserProfile"]=relationship(back_populates="user")
     posts: Mapped[List["Post"]] = relationship(back_populates="user")
     media: Mapped[List["Media"]] = relationship(back_populates="user")
     setting: Mapped["UserSetting"] = relationship(back_populates="user")
@@ -128,6 +119,7 @@ class UserProfile(Base):
     cover_picture: Mapped["Media"] = relationship(
         "Media", foreign_keys=[cover_pic_img]
     )
+    user: Mapped["User"]=relationship(back_populates="user_profile")
     city: Mapped["City"] = relationship(back_populates="user_profiles")
 
 class UserSetting(Base):
@@ -155,15 +147,16 @@ class Post(Base):
 class Media(Base):
     __tablename__ = "media"
     id: Mapped[int] = mapped_column(primary_key=True)
-    name = Column(String(30), nullable=False)
+    name = Column(String(200), nullable=False)
     alt = Column(String(30))
     type: Mapped[MediaType]
     visibility: Mapped[Visibility] = mapped_column(default=Visibility.PUBLIC)
     uploaded_by = Column(ForeignKey("users.id"), nullable=False)
-    user: Mapped[User] = relationship(back_populates="media")
     uploaded_at = Column(DateTime, nullable=False)
     uploaded_to = Column(String(300), nullable=False)
+    public_image_url=Column(String(300), nullable=False)
     # -------------Relationships-------------
+    user: Mapped[User] = relationship(back_populates="media")
     posts: Mapped[List["Post"]] = relationship(
         secondary="post_media", back_populates="media"
     )

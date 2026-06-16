@@ -1,9 +1,10 @@
 import strawberry
 from .user import UserNode
+from .media import MediaNode
 from datetime import datetime
 from social_media_app.schemas import Visibility, Post
 from strawberry import relay
-from typing import Iterable, List
+from typing import Iterable, List, Optional
 from sqlalchemy import select
 
 @strawberry.type
@@ -14,6 +15,7 @@ class UserPostNode(relay.Node):
     created_by: "UserNode"
     created_at: datetime
     visibility: Visibility
+    media: Optional[List[MediaNode]]
 
     @classmethod
     async def resolve_nodes(
@@ -38,11 +40,12 @@ class UserPostNode(relay.Node):
             return db_user
     
     @staticmethod
-    def from_db(info: strawberry.Info, db_user:Post)->"UserPostNode":
+    async def from_db(info: strawberry.Info, db_user:Post)->"UserPostNode":
         return UserPostNode(id=db_user.id,
             title=db_user.title,
             description=db_user.description,
             created_at=db_user.created_at,
-            created_by=UserNode.from_db(info, UserNode.get(info, db_user.created_by)),
-            visibility=db_user.visibility.value
+            created_by=UserNode.from_db(info, db_user.user),
+            visibility=db_user.visibility.value,
+            media=[await MediaNode.from_db(info, m) for m in db_user.media] if db_user.media else None
         )
