@@ -12,16 +12,16 @@ from datetime import date
 import os
 from database import UPLOAD_DIR
 import uuid
+from strawberry.relay.utils import from_base64
+from sqlalchemy import delete, select
+from sqlalchemy.orm import selectinload
+from fastapi import HTTPException
 
 @strawberry.type
 class Mutation:
     @strawberry.field(permission_classes=[IsAuthenticated])
     async def create_post(self, info: strawberry.Info, data: UserPostInput)->Optional[UserPostNode]:
-        user_id=info.context.user.id
-        
-        # 1. Validate File Format
         allowed_types = ["image/jpeg", "image/png", "image/webp"]
-        print("content_type---->", data.image.content_type)
         if data.image.content_type not in allowed_types:
             raise Exception("Invalid file format. Upload JPEG, PNG, or WebP only.")
             
@@ -62,7 +62,6 @@ class Mutation:
                 db.add(new_post)
                 await db.commit()
                 # await db.refresh(new_post)
-                print("new_post media---->", new_post.media)
                 return await UserPostNode.from_db(info, new_post)
             except Exception as e:
                 # Rollback and clean up local file if the SQL execution fails
@@ -70,6 +69,23 @@ class Mutation:
                 if os.path.exists(file_save_path):
                     os.remove(file_save_path)
                 raise Exception(f"Database error: {str(e)}")
+
+    @strawberry.field(permission_classes=[IsAuthenticated])
+    async def delete_post(self, info: strawberry.Info, gid: relay.GlobalID)->str:
+        db = info.context.db
+        db_factory = info.context.db_factory 
+        async with db_factory as db:
+            stmt = select(Post).options(selectinload(Post.media)).where(Post.id == gid.node_id).where(info.context.user.id==Post.created_by)
+            result = await db.execute(stmt)
+            user_post=result.scalar_one_or_none()
+            if user_post:
+                [await db.delete(m) for m in user_post.media]
+                user_post.media=[]
+                await db.delete(user_post)
+                await db.commit()
+                return f"{gid} deleted successfully!"
+            else:
+                raise HTTPException(404, f"{gid} post not found")
 
     @strawberry.field
     async def update_user(self, info: strawberry.Info, data: UpdateUserInput) -> Optional[UserNode]:
@@ -117,12 +133,7 @@ class Mutation:
         user=info.context.user
         db_factory=info.context.db_factory
         async with db_factory() as db:
-            # user=db.query(UserModel).filter(UserModel.id==user.id).first()
-            friend_id=data.friend_id
-            print("GlobalID - ", friend_id.node_id)
-            friend_req_node=await friend_id.resolve_node(info)
-            # print("Resolved Node: ", friend_req_node.user, friend_req_node.friend)
-            friend_req=await FriendRequestNode.get(info, friend_req_node.resolve_id(info))
+            friend_req=await FriendRequestNode.get(info, data.friend_id.node_id)
             friend_req.status=data.status
             print("db friend request object: ", friend_req)
             db.add(friend_req)

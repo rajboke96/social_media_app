@@ -13,3 +13,13 @@ def decode_cursor_to_offset(cursor_string: Optional[str]) -> int:
     except Exception:
         pass
     return 0
+
+def decode_node_id(node_id: str):
+    # Decode the Base64 token back into a readable string
+    decoded_bytes = base64.b64decode(node_id)
+    decoded_str = decoded_bytes.decode("utf-8")
+    
+    # Split the type name from the database ID using the colon separator
+    type_name, original_id = decoded_str.split(":", 1)
+    
+    return type_name, original_id

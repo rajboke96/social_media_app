@@ -68,8 +68,8 @@ class Friend(Base):
 post_media = Table(
     "post_media",
     Base.metadata,
-    Column("post_id", ForeignKey("posts.id"), primary_key=True),
-    Column("media_id", ForeignKey("media.id"), primary_key=True),
+    Column("post_id", ForeignKey("posts.id", ondelete="CASCADE"), primary_key=True),
+    Column("media_id", ForeignKey("media.id", ondelete="CASCADE"), primary_key=True)
 )
 
 class User(Base):

@@ -38,7 +38,7 @@ class UserPostInput:
     description: Optional[str]=None
     visibility: Visibility
     alt: str
-    image: Upload # Use the Upload scalar for the image file
+    image: List[Upload] # Use the Upload scalar for the image file
 
 @strawberry.input
 class PostFilterInput:
