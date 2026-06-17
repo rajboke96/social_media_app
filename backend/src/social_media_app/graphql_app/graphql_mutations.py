@@ -22,43 +22,49 @@ class Mutation:
     @strawberry.field(permission_classes=[IsAuthenticated])
     async def create_post(self, info: strawberry.Info, data: UserPostInput)->Optional[UserPostNode]:
         allowed_types = ["image/jpeg", "image/png", "image/webp"]
-        if data.image.content_type not in allowed_types:
-            raise Exception("Invalid file format. Upload JPEG, PNG, or WebP only.")
+        saved_img_list=[]
+        for img in data.image:
+            if img.content_type not in allowed_types:
+                raise Exception("Invalid file format. Upload JPEG, PNG, or WebP only.")
+                
+            # 2. Ensure Asset Directory Exists
+            os.makedirs(UPLOAD_DIR, exist_ok=True)
+            # 3. Generate a safe unique file name using UUID
+            file_extension = os.path.splitext(img.filename)[1]
+            unique_filename = f"{uuid.uuid4().hex}{file_extension}"
+            file_save_path = os.path.join(UPLOAD_DIR, unique_filename)
             
-        # 2. Ensure Asset Directory Exists
-        os.makedirs(UPLOAD_DIR, exist_ok=True)
-        # 3. Generate a safe unique file name using UUID
-        file_extension = os.path.splitext(data.image.filename)[1]
-        unique_filename = f"{uuid.uuid4().hex}{file_extension}"
-        file_save_path = os.path.join(UPLOAD_DIR, unique_filename)
-        
-        # 4. Stream and write the file asynchronously
-        contents = await data.image.read()
-        with open(file_save_path, "wb") as f:
-            f.write(contents)
-        # 5. Formulate web-accessible URL path
-        public_image_url = f"/static/uploads/{unique_filename}"
-        
+            # 4. Stream and write the file asynchronously
+            contents = await img.read()
+            with open(file_save_path, "wb") as f:
+                f.write(contents)
+            # 5. Formulate web-accessible URL path
+            public_image_url = f"/static/uploads/{unique_filename}"
+            saved_img_list.append({
+                "filename": unique_filename,
+                "file_save_path": file_save_path,
+                "public_image_url": public_image_url,
+            })
+        new_post=Post(title=data.title,
+        description=data.description,
+        # created_by=user_id,
+        created_at=datetime.now(),
+        visibility=data.visibility,
+        )
+        new_post.user=info.context.user
+        for saved_img_data in saved_img_list:
+            media=Media(
+                name = saved_img_data["filename"],
+                alt = data.alt,
+                type=MediaType.IMAGE,
+                uploaded_at = datetime.now(),
+                uploaded_to = saved_img_data["file_save_path"],
+                public_image_url=saved_img_data["public_image_url"]
+            )
+            media.user=info.context.user
+            new_post.media.append(media)
         async with info.context.db_factory() as db:
-            try:
-                # 6. Database Async Entry
-                new_post=Post(title=data.title,
-                description=data.description,
-                # created_by=user_id,
-                created_at=datetime.now(),
-                visibility=data.visibility,
-                )
-                media=Media(
-                    name = data.image.filename,
-                    alt = data.alt,
-                    type=MediaType.IMAGE,
-                    uploaded_at = datetime.now(),
-                    uploaded_to = file_save_path,
-                    public_image_url=public_image_url
-                )
-                media.user=info.context.user
-                new_post.user=info.context.user
-                new_post.media.append(media)
+            try:   
                 db.add(new_post)
                 await db.commit()
                 # await db.refresh(new_post)
@@ -66,15 +72,16 @@ class Mutation:
             except Exception as e:
                 # Rollback and clean up local file if the SQL execution fails
                 await db.rollback()
-                if os.path.exists(file_save_path):
-                    os.remove(file_save_path)
+                for saved_img_data in saved_img_list:
+                    if os.path.exists(saved_img_data["file_save_path"]):
+                        os.remove(saved_img_data["file_save_path"])
                 raise Exception(f"Database error: {str(e)}")
 
     @strawberry.field(permission_classes=[IsAuthenticated])
     async def delete_post(self, info: strawberry.Info, gid: relay.GlobalID)->str:
         db = info.context.db
         db_factory = info.context.db_factory 
-        async with db_factory as db:
+        async with db_factory() as db:
             stmt = select(Post).options(selectinload(Post.media)).where(Post.id == gid.node_id).where(info.context.user.id==Post.created_by)
             result = await db.execute(stmt)
             user_post=result.scalar_one_or_none()
