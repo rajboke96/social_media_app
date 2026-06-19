@@ -1,5 +1,7 @@
 import strawberry
 from social_media_app.schemas import Country, City, State
+from src.logger import get_logger
+logger = get_logger(__name__)
 
 @strawberry.type
 class UserType:
@@ -19,6 +21,7 @@ class CountryType:
 
     @staticmethod
     def from_db(info: strawberry.Info, db_country:Country)->"CountryType":
+        logger.info('exit')
         return CountryType(
             id=db_country.id,
             name=db_country.country,
@@ -30,6 +33,7 @@ class CountryType:
         db=info.context.db
         db_city=db.query(Country).filter(Country.id==id).first()
         if db_city:
+            logger.info('exit')
             return db_city
 
 @strawberry.type
@@ -44,10 +48,12 @@ class StateType:
         db=info.context.db
         db_city=db.query(State).filter(State.id==id).first()
         if db_city:
+            logger.info('exit')
             return db_city
 
     @staticmethod
     def from_db(info: strawberry.Info, db_state:State)->"StateType":
+        logger.info('exit')
         return StateType(
             id=db_state.id,
             name=db_state.state,
@@ -67,10 +73,12 @@ class CityType:
         db=info.context.db
         db_city=db.query(City).filter(City.id==id).first()
         if db_city:
+            logger.info('exit')
             return db_city
         
     @staticmethod
     def from_db(info: strawberry.Info, db_state:City)->"CityType":
+        logger.info('exit')
         return CityType(
             id=db_state.id,
             name=db_state.state,

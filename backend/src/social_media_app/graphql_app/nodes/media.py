@@ -1,7 +1,9 @@
 import strawberry
-from .user import UserNode
-from datetime import datetime
-from social_media_app.schemas import Visibility, Media
+from src.logger import get_logger
+logger = get_logger(__name__)
+
+
+from social_media_app.schemas import Media
 from strawberry import relay
 from typing import Iterable, List
 from sqlalchemy import select
@@ -23,6 +25,7 @@ class MediaNode(relay.Node):
             data = await MediaNode.get(info, int(nid))
             if data:
                 results.append(MediaNode.from_db(info, data))
+        logger.info('exit')
         return results
 
     @staticmethod
@@ -32,10 +35,12 @@ class MediaNode(relay.Node):
             statement=select(Media).where(Media.id==id)
             result=await db.execute(statement)
             db_user=result.scalar_one_or_none()
+            logger.info('exit')
             return db_user
     
     @staticmethod
     async def from_db(info: strawberry.Info, db_user:Media)->"MediaNode":
+        logger.info('exit')
         return MediaNode(id=db_user.id,
             name=db_user.name,
             public_image_url=db_user.public_image_url

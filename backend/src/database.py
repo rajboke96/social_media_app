@@ -1,9 +1,11 @@
-from contextlib import asynccontextmanager
+
 from typing import AsyncGenerator
-from fastapi import FastAPI, Depends, HTTPException, status
+from fastapi import FastAPI, Depends
 from sqlalchemy.ext.asyncio import create_async_engine, async_sessionmaker, AsyncSession
-from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
-from sqlalchemy import select
+from sqlalchemy.orm import DeclarativeBase
+from src.logger import get_logger
+logger = get_logger(__name__)
+
 
 # 1. Database Configuration (Note the mysql+aiomysql:// protocol)
 DATABASE_URL = "mysql+aiomysql://root:mysqlD123@localhost:3306/social_media_app"
@@ -33,4 +35,5 @@ async def get_db() -> AsyncGenerator[AsyncSession, None]:
 
 # Instead of passing a finished live session instance down the context wire...
 async def get_db_factory():
+    logger.info('exit')
     return AsyncSessionLocal

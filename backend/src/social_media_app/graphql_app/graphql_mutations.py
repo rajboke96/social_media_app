@@ -2,8 +2,10 @@ import strawberry
 from .graphql_inputs import UpdateUserInput, UserPostInput, UpdateFriendRequest
 from typing import Optional
 from .graphql_nodes import UserNode, UserPostNode, FriendRequestNode
-from database import get_db, get_db_factory
-from contextlib import contextmanager
+from database import get_db_factory
+from src.logger import get_logger
+logger = get_logger(__name__)
+
 from .context_permissions import IsAuthenticated
 from social_media_app.schemas import Post, FriendRequestStatus, Friend, Media, MediaType
 from datetime import datetime
@@ -12,8 +14,8 @@ from datetime import date
 import os
 from database import UPLOAD_DIR
 import uuid
-from strawberry.relay.utils import from_base64
-from sqlalchemy import delete, select
+
+from sqlalchemy import select
 from sqlalchemy.orm import selectinload
 from fastapi import HTTPException
 
@@ -21,6 +23,7 @@ from fastapi import HTTPException
 class Mutation:
     @strawberry.field(permission_classes=[IsAuthenticated])
     async def create_post(self, info: strawberry.Info, data: UserPostInput)->Optional[UserPostNode]:
+        logger.info('enter create_post')
         allowed_types = ["image/jpeg", "image/png", "image/webp"]
         saved_img_list=[]
         for img in data.image:
@@ -45,40 +48,48 @@ class Mutation:
                 "file_save_path": file_save_path,
                 "public_image_url": public_image_url,
             })
-        new_post=Post(title=data.title,
-        description=data.description,
-        # created_by=user_id,
-        created_at=datetime.now(),
-        visibility=data.visibility,
-        )
-        new_post.user=info.context.user
-        for saved_img_data in saved_img_list:
-            media=Media(
-                name = saved_img_data["filename"],
-                alt = data.alt,
-                type=MediaType.IMAGE,
-                uploaded_at = datetime.now(),
-                uploaded_to = saved_img_data["file_save_path"],
-                public_image_url=saved_img_data["public_image_url"]
-            )
-            media.user=info.context.user
-            new_post.media.append(media)
         async with info.context.db_factory() as db:
-            try:   
-                db.add(new_post)
-                await db.commit()
-                # await db.refresh(new_post)
-                return await UserPostNode.from_db(info, new_post)
-            except Exception as e:
-                # Rollback and clean up local file if the SQL execution fails
-                await db.rollback()
-                for saved_img_data in saved_img_list:
-                    if os.path.exists(saved_img_data["file_save_path"]):
-                        os.remove(saved_img_data["file_save_path"])
-                raise Exception(f"Database error: {str(e)}")
+            new_post=Post(title=data.title,
+            description=data.description,
+            # created_by=user_id,
+            created_at=datetime.now(),
+            visibility=data.visibility,
+            )
+            new_post.user=info.context.user
+            new_post.user = await db.merge(new_post.user)
+            for saved_img_data in saved_img_list:
+                media=Media(
+                    name = saved_img_data["filename"],
+                    alt = data.alt,
+                    type=MediaType.IMAGE,
+                    uploaded_at = datetime.now(),
+                    uploaded_to = saved_img_data["file_save_path"],
+                    public_image_url=saved_img_data["public_image_url"]
+                )
+                media.user=new_post.user
+                new_post.media.append(media)
+                try:   
+                    db.add(new_post)
+                    logger.debug('Committing database transaction')
+                    logger.debug('Committing database transaction')
+                    await db.commit()
+                    logger.debug('Performing SQLAlchemy session operation')
+                    # await db.refresh(new_post)
+                    logger.info('exit')
+                    return await UserPostNode.from_db(info, new_post)
+                except Exception as e:
+                    # Rollback and clean up local file if the SQL execution fails
+                    logger.debug('Rolling back database transaction')
+                    logger.debug('Rolling back database transaction')
+                    await db.rollback()
+                    for saved_img_data in saved_img_list:
+                        if os.path.exists(saved_img_data["file_save_path"]):
+                            os.remove(saved_img_data["file_save_path"])
+                    raise Exception(f"Database error: {str(e)}")
 
     @strawberry.field(permission_classes=[IsAuthenticated])
     async def delete_post(self, info: strawberry.Info, gid: relay.GlobalID)->str:
+        logger.info('enter delete_post')
         db = info.context.db
         db_factory = info.context.db_factory 
         async with db_factory() as db:
@@ -86,16 +97,22 @@ class Mutation:
             result = await db.execute(stmt)
             user_post=result.scalar_one_or_none()
             if user_post:
+                logger.debug('Performing SQLAlchemy session operation')
                 [await db.delete(m) for m in user_post.media]
                 user_post.media=[]
+                logger.debug('Performing SQLAlchemy session operation')
                 await db.delete(user_post)
+                logger.debug('Committing database transaction')
+                logger.debug('Committing database transaction')
                 await db.commit()
+                logger.info('exit')
                 return f"{gid} deleted successfully!"
             else:
                 raise HTTPException(404, f"{gid} post not found")
 
     @strawberry.field
     async def update_user(self, info: strawberry.Info, data: UpdateUserInput) -> Optional[UserNode]:
+        logger.info('enter update_user')
         # 1. Fetch existing user from your database
         user_id=info.context.user.id
         user = await UserNode.get(user_id)
@@ -113,11 +130,15 @@ class Mutation:
             user.dob = data.dob # Could be a string or None
         async with get_db_factory() as db:
             db.add(user)
+            logger.debug('Committing database transaction')
+            logger.debug('Committing database transaction')
             await db.commit()
+            logger.info('exit')
             return UserNode.from_db(user)
 
     @strawberry.field(permission_classes=[IsAuthenticated])
     async def create_friend_request(self, info: strawberry.Info, user_id: relay.GlobalID) -> Optional[str]:
+        logger.info('enter create_friend_request')
         user=info.context.user
         db=info.context.db
 
@@ -132,17 +153,21 @@ class Mutation:
             friends_at=date.today()              # Setting the date value
         )
         db.add(new_friendship)
+        logger.debug('Committing database transaction')
+        logger.debug('Committing database transaction')
         await db.commit()
 
     @strawberry.field(permission_classes=[IsAuthenticated])
     async def update_friend_request(self, info: strawberry.Info, data: UpdateFriendRequest) -> Optional[str]:
+        logger.info('enter update_friend_request')
         # 1. Fetch existing user from your database
         user=info.context.user
         db_factory=info.context.db_factory
         async with db_factory() as db:
             friend_req=await FriendRequestNode.get(info, data.friend_id.node_id)
             friend_req.status=data.status
-            print("db friend request object: ", friend_req)
             db.add(friend_req)
+            logger.debug('Committing database transaction')
+            logger.debug('Committing database transaction')
             await db.commit()
         

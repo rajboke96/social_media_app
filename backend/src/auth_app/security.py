@@ -1,6 +1,8 @@
 from passlib.context import CryptContext
-from jose import JWTError, jwt
+from jose import jwt
 from datetime import datetime, timedelta
+from src.logger import get_logger
+logger = get_logger(__name__)
 
 SECRET_KEY = "mklsmdlkjslkjm;osmk[oekfoek[oke9iu32098391-1ei0owkpesdokso;lmdc;]]"
 ALGORITHM = "HS256"
@@ -9,9 +11,11 @@ ACCESS_TOKEN_EXPIRE_MINUTES = 30
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
 def verify_password(plain_password, hashed_password):
+    logger.info('exit')
     return pwd_context.verify(plain_password, hashed_password)
 
 def get_password_hash(password):
+    logger.info('exit')
     return pwd_context.hash(password)
 
 def create_access_token(data: dict, expires_delta: timedelta | None = None):
@@ -22,4 +26,5 @@ def create_access_token(data: dict, expires_delta: timedelta | None = None):
         expire = datetime.utcnow() + timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
     to_encode.update({"exp": expire})
     encoded_jwt = jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
+    logger.info('exit')
     return encoded_jwt

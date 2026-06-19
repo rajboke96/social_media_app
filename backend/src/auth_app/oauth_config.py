@@ -1,6 +1,8 @@
 # app/auth/oauth_config.py
 from authlib.integrations.starlette_client import OAuth
 from starlette.config import Config
+from src.logger import get_logger
+logger = get_logger(__name__)
 
 # Load variables directly from the environment file
 config = Config("auth_app/.env")

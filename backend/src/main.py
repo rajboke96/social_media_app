@@ -1,45 +1,48 @@
 # main.py
-from fastapi import FastAPI, Depends
-from sqlalchemy.orm import Session
-# from routers import items, users # Import the router modules
-# from auth import routes as auth_routes
-from social_media_app.graphql_app.graphql_app import sm_app_router
-from auth_app.graphql_app.graphql_app import graphql_auth_router
+from fastapi import FastAPI
+from sqlalchemy import select
 from pathlib import Path
 import sys
-from database import get_db
+
+ROOT_DIR = Path(__file__).parent.resolve()
+PROJECT_ROOT = ROOT_DIR.parent if ROOT_DIR.name == 'src' else ROOT_DIR
+sys.path.insert(0, str(PROJECT_ROOT))
+
+from social_media_app.graphql_app.graphql_app import sm_app_router
+from auth_app.graphql_app.graphql_app import graphql_auth_router
 from social_media_app.schemas import UserRole, User, UserSetting
 from auth_app.security import get_password_hash
-from contextlib import contextmanager
 from fastapi.middleware.cors import CORSMiddleware
-# from fastapi import FastAPI
-# from starlette.middleware.sessions import SessionMiddleware
-# from auth_app.router import router as auth_router
 import os
 from starlette.middleware.sessions import SessionMiddleware
 from auth_app.router import router as auth_router
-from database import engine
+from database import engine, AsyncSessionLocal
 from contextlib import asynccontextmanager
 from social_media_app.schemas import Base
+from src.logger import get_logger
+logger = get_logger(__name__)
 
-ROOT_DIR=Path(__file__).parent.resolve()
-sys.path.append(ROOT_DIR)
-
-# 5. Application Lifespan Manager (Global Lifecycle)
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    # Setup: Create tables if they do not exist (Optional: better to use Alembic)
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
     yield
-    # Teardown: Safely shut down connection pools on exit
     await engine.dispose()
 
 app = FastAPI(lifespan=lifespan)
 
-# app = FastAPI()
+# Handle expected Strawberry GraphQL authorization errors concisely
+from fastapi.responses import JSONResponse
+from strawberry.exceptions import StrawberryGraphQLError
 
-# Allowed origins
+
+@app.exception_handler(StrawberryGraphQLError)
+async def handle_strawberry_graphql_error(request, exc: StrawberryGraphQLError):
+    # Log a concise message only (no stacktrace) for authorization/authentication errors
+    logger.info('GraphQL authorization error: %s', str(exc))
+    # Return a GraphQL-formatted error response so clients receive the error in the usual shape
+    return JSONResponse(status_code=200, content={"data": None, "errors": [{"message": str(exc)}]})
+
 origins = ["http://127.0.0.1:5173"]
 
 app.add_middleware(
@@ -50,27 +53,32 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Crucial for OAuth state tracking verification
 app.add_middleware(SessionMiddleware, secret_key=os.getenv("SECRET_KEY"))
 
 @app.on_event("startup")
 async def create_initial_admin():
-    with contextmanager(get_db)() as db:
-        # Replace with your actual database logic
-        admin_exists = db.query(User).filter(User.role==UserRole.ADMIN.value).first()
+    logger.info('enter create_initial_admin')
+    async with AsyncSessionLocal() as db:
+        result = await db.execute(select(User).where(User.role == UserRole.ADMIN))
+        admin_exists = result.scalar_one_or_none()
         if not admin_exists:
-            print("No admin found. Creating default admin...")
-            admin_user=User(firstname="", username="admin", hashed_password=get_password_hash("admin@123"), role=UserRole.ADMIN.value)
-            user_setting=UserSetting(user=admin_user)
-            db.add(user_setting)
-            db.add(admin_user)
-            db.commit()
+            admin_user = User(
+                firstname="",
+                username="admin",
+                hashed_password=get_password_hash("admin@123"),
+                role=UserRole.ADMIN,
+            )
+            user_setting = UserSetting(user=admin_user)
+            async with db.begin():
+                logger.debug('Performing SQLAlchemy session operation')
+                logger.debug('Performing SQLAlchemy session operation')
+                db.add_all([user_setting, admin_user])
 
 app.include_router(sm_app_router, prefix="/app/graphql")
 app.include_router(graphql_auth_router, prefix="/auth/graphql")
-
 app.include_router(auth_router, prefix="/auth")
 
 @app.get("/")
 async def root():
+    logger.info('exit')
     return {"message": "Hello Bigger Applications!"}

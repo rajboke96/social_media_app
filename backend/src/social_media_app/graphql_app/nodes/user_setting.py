@@ -4,6 +4,8 @@ from social_media_app.schemas import UserSetting
 from strawberry import relay
 from typing import Iterable, List
 from sqlalchemy import select
+from src.logger import get_logger
+logger = get_logger(__name__)
 
 @strawberry.type
 class UserSettingNode(relay.Node):
@@ -22,6 +24,7 @@ class UserSettingNode(relay.Node):
             data = await UserSettingNode.get(info, int(nid))
             if data:
                 results.append(UserSettingNode.from_db(data))
+        logger.info('exit')
         return results
 
     @staticmethod
@@ -31,4 +34,5 @@ class UserSettingNode(relay.Node):
             statement=select(UserSetting).where(UserSetting.id==user_id)
             result=await db.execute(statement)
             user_setting = result.scalar_one_or_none()
+            logger.info('exit')
             return user_setting

@@ -6,6 +6,8 @@ from social_media_app.schemas import Visibility, Post
 from strawberry import relay
 from typing import Iterable, List, Optional
 from sqlalchemy import select
+from src.logger import get_logger
+logger = get_logger(__name__)
 
 @strawberry.type
 class UserPostNode(relay.Node):
@@ -28,6 +30,7 @@ class UserPostNode(relay.Node):
             data = await UserPostNode.get(info, int(nid))
             if data:
                 results.append(UserPostNode.from_db(info, data))
+        logger.info('exit')
         return results
 
     @staticmethod
@@ -37,10 +40,12 @@ class UserPostNode(relay.Node):
             statement=select(Post).where(Post.id==id)
             result=await db.execute(statement)
             db_user=result.scalar_one_or_none()
+            logger.info('exit')
             return db_user
     
     @staticmethod
     async def from_db(info: strawberry.Info, db_user:Post)->"UserPostNode":
+        logger.info('exit')
         return UserPostNode(id=db_user.id,
             title=db_user.title,
             description=db_user.description,

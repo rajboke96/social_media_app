@@ -1,6 +1,8 @@
 import strawberry
 from typing import Optional
 from social_media_app.schemas import Gender
+from src.logger import get_logger
+logger = get_logger(__name__)
 
 @strawberry.input
 class CreateTokenInput:

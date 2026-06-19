@@ -3,6 +3,8 @@ from social_media_app.schemas import User as UserModel
 from typing import List, Iterable
 from strawberry import relay
 from sqlalchemy import select
+from src.logger import get_logger
+logger = get_logger(__name__)
 
 @strawberry.type
 class UserNode(relay.Node):
@@ -24,6 +26,7 @@ class UserNode(relay.Node):
             data = await UserNode.get(info, int(nid))
             if data:
                 results.append(UserNode.from_db(info, data))
+        logger.info('exit')
         return results
     
     @staticmethod
@@ -33,10 +36,12 @@ class UserNode(relay.Node):
             statement=select(UserModel).where(UserModel.id==id)
             result=await db.execute(statement)
             db_user=result.scalar_one_or_none()
+            logger.info('exit')
             return db_user
 
     @staticmethod
     def from_db(info: strawberry.Info, db_user:UserModel)->"UserNode":
+        logger.info('exit')
         return UserNode(id=db_user.id, 
             name=db_user.firstname, 
             email=db_user.email_address, 

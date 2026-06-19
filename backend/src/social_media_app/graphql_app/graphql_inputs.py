@@ -4,6 +4,8 @@ from typing import List, Optional
 from social_media_app.schemas import AccountType, Gender, Visibility, FriendRequestStatus
 from datetime import date
 from strawberry.file_uploads import Upload
+from src.logger import get_logger
+logger = get_logger(__name__)
 
 @strawberry.input
 class UpdateFriendRequest:

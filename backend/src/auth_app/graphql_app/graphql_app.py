@@ -2,13 +2,17 @@ import strawberry
 from strawberry.fastapi import GraphQLRouter
 from .graphql_mutations import Mutation
 from .context_permissions import get_context
+from src.logger import get_logger
+logger = get_logger(__name__)
 
 @strawberry.type
 class Query:
     @strawberry.field
     def ping(self, info: strawberry.Info) -> str:
+        logger.info('enter ping')
+        logger.info('exit')
         return "Pong"
-    
+
 # 4. Create the Schema
 schema = strawberry.Schema(query=Query, mutation=Mutation)
 

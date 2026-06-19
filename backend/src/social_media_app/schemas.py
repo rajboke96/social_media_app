@@ -5,6 +5,8 @@ from typing import List, Optional
 import logging
 import enum
 from datetime import date
+from src.logger import get_logger
+logger = get_logger(__name__)
 
 logging.basicConfig()
 logging.getLogger("sqlalchemy.engine").setLevel(logging.INFO)
@@ -101,6 +103,7 @@ class User(Base):
     setting: Mapped["UserSetting"] = relationship(back_populates="user")
 
     def __repr__(self) -> str:
+        logger.info('exit')
         return f"User({self.firstname}, {self.username}, {self.dob})"
 
 class UserProfile(Base):
