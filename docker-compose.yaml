@@ -1,0 +1,75 @@
+version: "3.9"
+
+services:
+  db:
+    image: mysql:8.0
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: ${DB_ROOT_PASSWORD}
+      MYSQL_DATABASE: ${DB_NAME}
+    ports:
+      - "${DB_PORT}:${DB_PORT}"
+    volumes:
+      - db_data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    depends_on:
+      db:
+        condition: service_healthy
+    ports:
+      - "8000:8000"
+    environment:
+      DB_ROOT_PASSWORD: ${DB_ROOT_PASSWORD}
+      DB_NAME: ${DB_NAME}
+      UPLOAD_DIR: ${UPLOAD_DIR}
+      CORS_ORIGINS: ${CORS_ORIGINS}
+      DB_HOST: db
+      DB_PORT: ${DB_PORT}
+      DATABASE_URL: mysql+aiomysql://root:${DB_ROOT_PASSWORD}@db:${DB_PORT}/${DB_NAME}
+      SECRET_KEY: ${SECRET_KEY}
+      GOOGLE_SECRET_KEY: ${GOOGLE_SECRET_KEY}
+      GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID}
+      GOOGLE_CLIENT_SECRET: ${GOOGLE_CLIENT_SECRET}
+      # AWS_ACCESS_KEY_ID: ${AWS_ACCESS_KEY_ID}
+      # AWS_SECRET_ACCESS_KEY: ${AWS_SECRET_ACCESS_KEY}
+      # AWS_DEFAULT_REGION: ${AWS_DEFAULT_REGION}
+      # AWS_BUCKET_NAME: ${AWS_BUCKET_NAME}
+    restart: unless-stopped
+
+  # frontend:
+  #   build:
+  #     context: ./frontend
+  #     dockerfile: Dockerfile
+  #     args:
+  #       VITE_GRAPHQL_URL: ${VITE_GRAPHQL_URL}
+  #       VITE_EC2_PUBLIC_IP: ${VITE_EC2_PUBLIC_IP}
+  #   ports:
+  #     - "80:80"  # Changes frontend port to standard web port 80
+  #   depends_on:
+  #     - backend
+  #   restart: unless-stopped
+
+  # imgproxy:
+  #   image: ghcr.io/imgproxy/imgproxy:latest
+  #   container_name: imgproxy_service
+  #   restart: unless-stopped
+  #   ports:
+  #     - "8080:8080"
+  #   environment:
+  #     IMGPROXY_USE_S3: "true"
+  #     AWS_ACCESS_KEY_ID: ${AWS_ACCESS_KEY_ID}
+  #     AWS_SECRET_ACCESS_KEY: ${AWS_SECRET_ACCESS_KEY}
+  #     AWS_REGION: ${AWS_DEFAULT_REGION}
+  #     IMGPROXY_TTL: 2592000
+  #     IMGPROXY_LOG_LEVEL: "warn"
+
+volumes:
+  db_data:

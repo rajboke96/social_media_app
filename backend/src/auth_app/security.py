@@ -1,16 +1,12 @@
 from passlib.context import CryptContext
 from jose import jwt
 from datetime import datetime, timedelta
-from starlette.config import Config
 from pathlib import Path
 from src.logger import get_logger
 logger = get_logger(__name__)
+import os
 
-config = Config(str(Path(__file__).resolve().parent.parent / ".env"))
-SECRET_KEY = config(
-    "SECRET_KEY",
-    default="mklsmdlkjslkjm;osmk[oekfoek[oke9iu32098391-1ei0owkpesdokso;lmdc;]]",
-)
+SECRET_KEY = os.environ["SECRET_KEY"]
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = 30
 

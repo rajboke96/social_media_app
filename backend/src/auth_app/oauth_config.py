@@ -1,12 +1,14 @@
 # app/auth/oauth_config.py
 from authlib.integrations.starlette_client import OAuth
-from starlette.config import Config
 from src.logger import get_logger
 logger = get_logger(__name__)
+from starlette.config import Config
 
-# Load variables directly from the environment file
-config = Config("auth_app/.env")
-oauth = OAuth(config)
+# Initialize empty Config. It defaults to looking into os.environ automatically!
+starlette_config = Config()
+
+# Pass this wrapper directly to Authlib
+oauth = OAuth(config=starlette_config)
 
 # Register Google OpenID Connect configuration
 oauth.register(

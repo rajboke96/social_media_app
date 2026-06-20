@@ -10,7 +10,7 @@ function PostList(){
     if (error) return <div className="text-red-500">Error! {error.message}</div>;
     return (
         <>
-            {data.allUserPosts.edges.map((edge)=>
+            {data.UsersPostConnection.edges.map((edge)=>
                 (
                     <div className={style.postcontainer}>
                         <PostCard 

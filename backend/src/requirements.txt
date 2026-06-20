@@ -3,4 +3,5 @@ SQLAlchemy
 aiomysql
 fastapi
 uvicorn
-strawberry-graphql[cli]aiofiles==25.1.0
+strawberry-graphql[cli]
+aiofiles==25.1.0

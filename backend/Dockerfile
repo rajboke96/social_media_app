@@ -1,15 +1,18 @@
 FROM python:3.12-slim
 
 ENV PYTHONUNBUFFERED=1 \
-    PIP_NO_CACHE_DIR=1
+    PIP_NO_CACHE_DIR=1 \
+    PYTHONPATH=/app/src
 
 WORKDIR /app
 
-COPY src/requirements.txt src/auth_app/requirements.txt ./src/
+COPY ./src/ ./src/
+# COPY src/auth_app/requirements.txt ./src/auth_app/requirements.txt
+
 RUN pip install --upgrade pip && \
     pip install -r src/requirements.txt -r src/auth_app/requirements.txt
 
-COPY src ./src
+# COPY src ./src
 
 EXPOSE 8000
 

@@ -20,7 +20,6 @@ from database import engine, AsyncSessionLocal
 from contextlib import asynccontextmanager
 from social_media_app.schemas import Base
 from src.logger import get_logger
-from starlette.config import Config
 
 logger = get_logger(__name__)
 
@@ -45,8 +44,7 @@ async def handle_strawberry_graphql_error(request, exc: StrawberryGraphQLError):
     # Return a GraphQL-formatted error response so clients receive the error in the usual shape
     return JSONResponse(status_code=200, content={"data": None, "errors": [{"message": str(exc)}]})
 
-config = Config(".env")
-origins = config.get("CORS_ORIGINS").split(",") 
+origins = os.environ["CORS_ORIGINS"].split(",") 
 
 app.add_middleware(
     CORSMiddleware,
@@ -56,7 +54,7 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-app.add_middleware(SessionMiddleware, secret_key=config.get("SECRET_KEY"))
+app.add_middleware(SessionMiddleware, secret_key=os.environ["SECRET_KEY"])
 
 @app.on_event("startup")
 async def create_initial_admin():
@@ -68,14 +66,16 @@ async def create_initial_admin():
             admin_user = User(
                 firstname="",
                 username="admin",
-                hashed_password=get_password_hash(Config("admin_password")),
+                hashed_password=get_password_hash(os.environ["admin_password"]),
                 role=UserRole.ADMIN,
             )
             user_setting = UserSetting(user=admin_user)
-            async with db.begin():
-                logger.debug('Performing SQLAlchemy session operation')
-                logger.debug('Performing SQLAlchemy session operation')
-                db.add_all([user_setting, admin_user])
+            db.add_all([user_setting, admin_user])
+            await db.commit()
+            logger.info('Admin user created with username "admin"')
+        else:
+            logger.info('Admin user already exists, skipping creation')
+    logger.info('exit create_initial_admin')
 
 app.include_router(sm_app_router, prefix="/app/graphql")
 app.include_router(graphql_auth_router, prefix="/auth/graphql")
