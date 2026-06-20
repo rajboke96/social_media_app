@@ -20,6 +20,8 @@ from database import engine, AsyncSessionLocal
 from contextlib import asynccontextmanager
 from social_media_app.schemas import Base
 from src.logger import get_logger
+from starlette.config import Config
+
 logger = get_logger(__name__)
 
 @asynccontextmanager
@@ -43,7 +45,8 @@ async def handle_strawberry_graphql_error(request, exc: StrawberryGraphQLError):
     # Return a GraphQL-formatted error response so clients receive the error in the usual shape
     return JSONResponse(status_code=200, content={"data": None, "errors": [{"message": str(exc)}]})
 
-origins = ["http://127.0.0.1:5173"]
+config = Config(".env")
+origins = config.get("CORS_ORIGINS").split(",") 
 
 app.add_middleware(
     CORSMiddleware,
@@ -53,19 +56,19 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-app.add_middleware(SessionMiddleware, secret_key=os.getenv("SECRET_KEY"))
+app.add_middleware(SessionMiddleware, secret_key=config.get("SECRET_KEY"))
 
 @app.on_event("startup")
 async def create_initial_admin():
     logger.info('enter create_initial_admin')
     async with AsyncSessionLocal() as db:
         result = await db.execute(select(User).where(User.role == UserRole.ADMIN))
-        admin_exists = result.scalar_one_or_none()
+        admin_exists = result.first()
         if not admin_exists:
             admin_user = User(
                 firstname="",
                 username="admin",
-                hashed_password=get_password_hash("admin@123"),
+                hashed_password=get_password_hash(Config("admin_password")),
                 role=UserRole.ADMIN,
             )
             user_setting = UserSetting(user=admin_user)

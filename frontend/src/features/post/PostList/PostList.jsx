@@ -6,7 +6,7 @@ import { useQuery } from "@apollo/client/react";
 function PostList(){
     const { data, loading, error } = useQuery(GET_ALL_POSTS);
     console.log(data)
-    if (loading) return <div className="p-4">Loading Posts...</div>;
+    if (loading) return <div className={style.postcontainer}>Loading Posts...</div>;
     if (error) return <div className="text-red-500">Error! {error.message}</div>;
     return (
         <>

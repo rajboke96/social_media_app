@@ -1,15 +1,18 @@
 
 from typing import AsyncGenerator
-from fastapi import FastAPI, Depends
 from sqlalchemy.ext.asyncio import create_async_engine, async_sessionmaker, AsyncSession
-from sqlalchemy.orm import DeclarativeBase
+from starlette.config import Config
+from pathlib import Path
 from src.logger import get_logger
 logger = get_logger(__name__)
 
 
 # 1. Database Configuration (Note the mysql+aiomysql:// protocol)
-DATABASE_URL = "mysql+aiomysql://root:mysqlD123@localhost:3306/social_media_app"
-UPLOAD_DIR = "/home/rajendra/projects/social_media_app/backend/static/uploads"
+config = Config(".env")
+DATABASE_URL = config(
+    "DATABASE_URL"
+)
+UPLOAD_DIR = config.get("UPLOAD_DIR")
 
 # 2. Create the Async Engine (Global Connection Pool)
 # pool_pre_ping checks if the connection is alive before using it
