@@ -17,33 +17,49 @@ services:
       timeout: 5s
       retries: 5
 
-  backend:
-    build:
-      context: ./backend
-      dockerfile: Dockerfile
-    depends_on:
-      db:
-        condition: service_healthy
-    ports:
-      - "8000:8000"
-    environment:
-      DB_ROOT_PASSWORD: ${DB_ROOT_PASSWORD}
-      DB_NAME: ${DB_NAME}
-      UPLOAD_DIR: ${UPLOAD_DIR}
-      CORS_ORIGINS: ${CORS_ORIGINS}
-      DB_HOST: db
-      DB_PORT: ${DB_PORT}
-      DATABASE_URL: mysql+aiomysql://root:${DB_ROOT_PASSWORD}@db:${DB_PORT}/${DB_NAME}
-      SECRET_KEY: ${SECRET_KEY}
-      GOOGLE_SECRET_KEY: ${GOOGLE_SECRET_KEY}
-      GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID}
-      GOOGLE_CLIENT_SECRET: ${GOOGLE_CLIENT_SECRET}
-      # AWS_ACCESS_KEY_ID: ${AWS_ACCESS_KEY_ID}
-      # AWS_SECRET_ACCESS_KEY: ${AWS_SECRET_ACCESS_KEY}
-      # AWS_DEFAULT_REGION: ${AWS_DEFAULT_REGION}
-      # AWS_BUCKET_NAME: ${AWS_BUCKET_NAME}
-    restart: unless-stopped
+  # backend:
+  #   build:
+  #     context: ./backend
+  #     dockerfile: Dockerfile
+  #   depends_on:
+  #     db:
+  #       condition: service_healthy
+  #   ports:
+  #     - "8000:8000"
+  #   environment:
+  #     DB_ROOT_PASSWORD: ${DB_ROOT_PASSWORD}
+  #     DB_NAME: ${DB_NAME}
+  #     UPLOAD_DIR: ${UPLOAD_DIR}
+  #     CORS_ORIGINS: ${CORS_ORIGINS}
+  #     DB_HOST: db
+  #     DB_PORT: ${DB_PORT}
+  #     DATABASE_URL: mysql+aiomysql://root:${DB_ROOT_PASSWORD}@db:${DB_PORT}/${DB_NAME}
+  #     SECRET_KEY: ${SECRET_KEY}
+  #     GOOGLE_SECRET_KEY: ${GOOGLE_SECRET_KEY}
+  #     GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID}
+  #     GOOGLE_CLIENT_SECRET: ${GOOGLE_CLIENT_SECRET}
+  #     # AWS_ACCESS_KEY_ID: ${AWS_ACCESS_KEY_ID}
+  #     # AWS_SECRET_ACCESS_KEY: ${AWS_SECRET_ACCESS_KEY}
+  #     # AWS_DEFAULT_REGION: ${AWS_DEFAULT_REGION}
+  #     # AWS_BUCKET_NAME: ${AWS_BUCKET_NAME}
+  #   restart: unless-stopped
 
+  imgproxy:
+    image: ghcr.io/imgproxy/imgproxy:latest
+    container_name: imgproxy_service
+    restart: unless-stopped
+    ports:
+      - "8080:8080"
+    environment:
+      # 💡 Instruct imgproxy to look for files inside its internal /mnt/images directory
+      IMGPROXY_LOCAL_FILESYSTEM_ROOT: /mnt/images
+      IMGPROXY_LOG_LEVEL: "warn"
+      IMGPROXY_KEY: ${IMGPROXY_KEY}
+      IMGPROXY_SALT: ${IMGPROXY_SALT}
+      IMGPROXY_DEVELOPMENT_ERRORS_MODE: "true"
+    volumes:
+      # 💡 Mount the EXACT SAME local folder to imgproxy as Read-Only (:ro)
+      - ${UPLOAD_DIR}:/mnt/images:ro
   # frontend:
   #   build:
   #     context: ./frontend

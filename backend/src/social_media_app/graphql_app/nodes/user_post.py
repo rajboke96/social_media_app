@@ -45,7 +45,6 @@ class UserPostNode(relay.Node):
     
     @staticmethod
     async def from_db(info: strawberry.Info, db_user:Post)->"UserPostNode":
-        logger.info('exit')
         return UserPostNode(id=db_user.id,
             title=db_user.title,
             description=db_user.description,

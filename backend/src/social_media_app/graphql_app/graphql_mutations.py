@@ -42,11 +42,11 @@ class Mutation:
             with open(file_save_path, "wb") as f:
                 f.write(contents)
             # 5. Formulate web-accessible URL path
-            public_image_url = f"/static/uploads/{unique_filename}"
+            public_image_url = f"{os.environ['UPLOAD_DIR']}/{unique_filename}"
             saved_img_list.append({
                 "filename": unique_filename,
                 "file_save_path": file_save_path,
-                "public_image_url": public_image_url,
+                # "public_image_url": public_image_url,
             })
         async with info.context.db_factory() as db:
             new_post=Post(title=data.title,
@@ -64,28 +64,27 @@ class Mutation:
                     type=MediaType.IMAGE,
                     uploaded_at = datetime.now(),
                     uploaded_to = saved_img_data["file_save_path"],
-                    public_image_url=saved_img_data["public_image_url"]
+                    # public_image_url=saved_img_data["public_image_url"]
                 )
                 media.user=new_post.user
                 new_post.media.append(media)
-                try:   
-                    db.add(new_post)
-                    logger.debug('Committing database transaction')
-                    logger.debug('Committing database transaction')
-                    await db.commit()
-                    logger.debug('Performing SQLAlchemy session operation')
-                    # await db.refresh(new_post)
-                    logger.info('exit')
-                    return await UserPostNode.from_db(info, new_post)
-                except Exception as e:
-                    # Rollback and clean up local file if the SQL execution fails
-                    logger.debug('Rolling back database transaction')
-                    logger.debug('Rolling back database transaction')
-                    await db.rollback()
-                    for saved_img_data in saved_img_list:
-                        if os.path.exists(saved_img_data["file_save_path"]):
-                            os.remove(saved_img_data["file_save_path"])
-                    raise Exception(f"Database error: {str(e)}")
+            try:   
+                db.add(new_post)
+                logger.debug('Committing database transaction')
+                logger.debug('Committing database transaction')
+                logger.debug('Performing SQLAlchemy session operation')
+                await db.commit()
+                user_post_node=await UserPostNode.from_db(info, new_post)
+                return user_post_node
+            except Exception as e:
+                # Rollback and clean up local file if the SQL execution fails
+                logger.debug('Rolling back database transaction')
+                logger.debug('Rolling back database transaction')
+                await db.rollback()
+                for saved_img_data in saved_img_list:
+                    if os.path.exists(saved_img_data["file_save_path"]):
+                        os.remove(saved_img_data["file_save_path"])
+                raise Exception(f"Database error: {str(e)}")
 
     @strawberry.field(permission_classes=[IsAuthenticated])
     async def delete_post(self, info: strawberry.Info, gid: relay.GlobalID)->str:

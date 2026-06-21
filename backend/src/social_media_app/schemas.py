@@ -157,7 +157,7 @@ class Media(Base):
     uploaded_by = Column(ForeignKey("users.id"), nullable=False)
     uploaded_at = Column(DateTime, nullable=False)
     uploaded_to = Column(String(300), nullable=False)
-    public_image_url=Column(String(300), nullable=False)
+    # public_image_url=Column(String(300), nullable=False)
     # -------------Relationships-------------
     user: Mapped[User] = relationship(back_populates="media")
     posts: Mapped[List["Post"]] = relationship(

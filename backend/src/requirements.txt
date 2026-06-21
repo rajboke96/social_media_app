@@ -5,3 +5,4 @@ fastapi
 uvicorn
 strawberry-graphql[cli]
 aiofiles==25.1.0
+imgproxy

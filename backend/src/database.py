@@ -2,15 +2,15 @@
 from typing import AsyncGenerator
 from sqlalchemy.ext.asyncio import create_async_engine, async_sessionmaker, AsyncSession
 import os
-from pathlib import Path
 from src.logger import get_logger
 logger = get_logger(__name__)
 
 DB_ROOT_PASSWORD=os.environ["DB_ROOT_PASSWORD"]
 DB_PORT=os.environ["DB_PORT"]
 DB_NAME=os.environ["DB_NAME"]
+DB_HOST=os.environ["DB_HOST"]
 # 1. Database Configuration (Note the mysql+aiomysql:// protocol)
-DATABASE_URL = f"mysql+aiomysql://root:{DB_ROOT_PASSWORD}@db:{DB_PORT}/{DB_NAME}"
+DATABASE_URL = f"mysql+aiomysql://root:{DB_ROOT_PASSWORD}@{DB_HOST}:{DB_PORT}/{DB_NAME}"
 UPLOAD_DIR = os.environ["UPLOAD_DIR"]
 
 # 2. Create the Async Engine (Global Connection Pool)

@@ -1,4 +1,6 @@
+.env
 __pycache__/
+static/
 backend/scripts/
 backend/.venv/
 backend/tests/
@@ -7,4 +9,3 @@ frontend/html_designs/
 frontend/assets/
 frontend/public/
 frontend/node_modules/
-
