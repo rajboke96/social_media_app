@@ -1,6 +1,6 @@
 import strawberry
 from typing import List, Optional
-from .graphql_nodes import UserNode, UserProfileNode, UserPostNode, UserSettingNode, FriendRequestNode
+from .graphql_nodes import UserNode, UserProfileNode, UserPostNode, UserSettingNode, FriendRequestNode, CommentNode
 from .graphql_types import UserType
 from .context_permissions import IsAuthenticated
 from src.logger import get_logger
@@ -10,10 +10,11 @@ from strawberry import relay
 from social_media_app.schemas import UserRole, Friend, AccountStatus, AccountType, Gender, Visibility, Theme, MediaType
 from social_media_app.schemas import User as UserModel, UserProfile, Post
 from .query_inputs import Option
-from sqlalchemy import select
+from sqlalchemy import select, or_, and_, func
 from typing import List
 from .helper import decode_cursor_to_offset
 from sqlalchemy.orm import selectinload
+from social_media_app.services.feed_service import get_user_feed
 
 # 3. Define the Query Class (Read Operations)
 @strawberry.type
@@ -60,9 +61,39 @@ class Query:
                 first=first
             )
     
-    # @strawberry.field(permission_classes=[IsAuthenticated])
-    def search_user(self, user_search_str: str) -> List[UserNode]:
-        pass
+    @strawberry.field(permission_classes=[IsAuthenticated])
+    async def search_user(self, info: strawberry.Info, user_search_str: str, first: Optional[int] = 10, after: Optional[str] = None) -> relay.ListConnection[UserNode]:
+        db_factory = info.context.db_factory
+        async with db_factory() as db:
+            sql_offset = decode_cursor_to_offset(after)
+            sql_limit = min(first, 50) if first else 10
+            search_pattern = f"%{user_search_str.strip().lower()}%"
+
+            statement = (
+                select(UserModel)
+                .where(
+                    UserModel.role != UserRole.ADMIN,
+                    or_(
+                        UserModel.username.ilike(search_pattern),
+                        UserModel.firstname.ilike(search_pattern),
+                        UserModel.Lastname.ilike(search_pattern),
+                        UserModel.email_address.ilike(search_pattern)
+                    )
+                )
+                .order_by(UserModel.id.asc())
+                .offset(sql_offset)
+                .limit(sql_limit)
+            )
+            result = await db.execute(statement)
+            users = result.scalars().all()
+            nodes = [UserNode.from_db(info, user) for user in users]
+            logger.info('exit')
+            return relay.ListConnection.resolve_connection(
+                nodes=nodes,
+                info=info,
+                after=after,
+                first=first
+            )
     
     # @relay.connection(graphql_type=relay.ListConnection[UserProfileNode], max_results=10, permission_classes=[IsAuthenticated])
     @strawberry.field(permission_classes=[IsAuthenticated])
@@ -186,13 +217,52 @@ class Query:
             )
 
     @strawberry.field(permission_classes=[IsAuthenticated])
-    def get_feeds_for_user(self, info:strawberry.Info)->None:
+    async def get_feeds_for_user(self, info: strawberry.Info, first: Optional[int] = 20, after: Optional[str] = None) -> relay.ListConnection[UserPostNode]:
         """
-            feeds -> posts, ad, suggested friends
-            posts -> location, most viewed posts, friends liked posts
+        Generate personalized feed for the user based on:
+        - Posts from followed users (accepted friends)
+        - User's own posts
+        - Relevance score (likes, comments, recency)
         """
         logger.info('enter get_feeds_for_user')
-        pass
+        user_id = info.context.user.id
+        db_factory = info.context.db_factory
+        
+        async with db_factory() as db:
+            sql_offset = decode_cursor_to_offset(after)
+            sql_limit = min(first, 50) if first else 20
+            
+            # Get feed posts using feed service
+            feed_posts = await get_user_feed(
+                db=db,
+                user_id=user_id,
+                limit=sql_limit,
+                offset=sql_offset
+            )
+            
+            nodes = [await UserPostNode.from_db(info, post) for post in feed_posts]
+            logger.info('exit')
+            return relay.ListConnection.resolve_connection(
+                nodes=nodes,
+                info=info,
+                after=after,
+                first=first
+            )
+
+    @strawberry.field(permission_classes=[IsAuthenticated])
+    async def get_user_post(self, info: strawberry.Info, post_id: relay.GlobalID) -> Optional[UserPostNode]:
+        logger.info('enter get_user_post')
+        db_factory = info.context.db_factory
+        post_id=post_id.node_id
+        async with db_factory() as db:
+            statement = select(Post).where(Post.id == post_id).options(selectinload(Post.user), selectinload(Post.media))
+            result = await db.execute(statement)
+            post = result.scalar_one_or_none()
+            if not post:
+                logger.info('exit')
+                return None
+            logger.info('exit')
+            return await UserPostNode.from_db(info, post)
 
     @strawberry.field
     def get_options(self, option: Option)->List[str]:

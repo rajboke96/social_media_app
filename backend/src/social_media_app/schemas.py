@@ -4,7 +4,7 @@ from sqlalchemy.orm import DeclarativeBase, Mapped, relationship, mapped_column
 from typing import List, Optional
 import logging
 import enum
-from datetime import date
+from datetime import date, datetime
 from src.logger import get_logger
 logger = get_logger(__name__)
 
@@ -99,6 +99,7 @@ class User(Base):
     )
     user_profile: Mapped["UserProfile"]=relationship(back_populates="user")
     posts: Mapped[List["Post"]] = relationship(back_populates="user")
+    seen_posts: Mapped[List["PostView"]] = relationship(back_populates="user", cascade="all, delete-orphan")
     media: Mapped[List["Media"]] = relationship(back_populates="user")
     setting: Mapped["UserSetting"] = relationship(back_populates="user")
 
@@ -146,6 +147,41 @@ class Post(Base):
     media: Mapped[List["Media"]] = relationship(
         secondary="post_media", back_populates="posts"
     )
+    likes: Mapped[List["Like"]] = relationship(back_populates="post", cascade="all, delete-orphan")
+    comments: Mapped[List["Comment"]] = relationship(back_populates="post", cascade="all, delete-orphan")
+    views: Mapped[List["PostView"]] = relationship(back_populates="post", cascade="all, delete-orphan")
+
+class PostView(Base):
+    __tablename__ = "post_views"
+    user_id: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), primary_key=True)
+    post_id: Mapped[int] = mapped_column(ForeignKey("posts.id", ondelete="CASCADE"), primary_key=True)
+    seen_at: Mapped[datetime] = mapped_column(default=datetime.utcnow)
+
+    user: Mapped["User"] = relationship(back_populates="seen_posts")
+    post: Mapped["Post"] = relationship(back_populates="views")
+
+class Like(Base):
+    __tablename__ = "likes"
+    id: Mapped[int] = mapped_column(primary_key=True)
+    post_id: Mapped[int] = mapped_column(ForeignKey("posts.id", ondelete="CASCADE"), nullable=False)
+    user_id: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
+    created_at: Mapped[datetime] = mapped_column(nullable=False)
+    
+    # Relationships
+    post: Mapped["Post"] = relationship(back_populates="likes")
+    user: Mapped["User"] = relationship()
+
+class Comment(Base):
+    __tablename__ = "comments"
+    id: Mapped[int] = mapped_column(primary_key=True)
+    post_id: Mapped[int] = mapped_column(ForeignKey("posts.id", ondelete="CASCADE"), nullable=False)
+    user_id: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
+    text: Mapped[str] = mapped_column(String(500), nullable=False)
+    created_at: Mapped[datetime] = mapped_column(nullable=False)
+    
+    # Relationships
+    post: Mapped["Post"] = relationship(back_populates="comments")
+    user: Mapped["User"] = relationship()
 
 class Media(Base):
     __tablename__ = "media"

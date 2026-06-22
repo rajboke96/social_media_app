@@ -1,6 +1,27 @@
+import { useNavigate } from 'react-router-dom';
 import style from './style.module.css'
 
-function PostCard({authorname, posttitle, postdescription="", img_list=[]}){
+function PostCard({ authorname, posttitle, postdescription="", img_list=[], postId, onImageClick }){
+    const navigate = useNavigate();
+    const images = img_list.length > 0 ? img_list : [{ url: "static/images/506302782_9643445375778926_6296838114955530405_n.jpg" }];
+    const count = images.length;
+    
+    const getGridClass = () => {
+        if (count === 1) return style.singleImage;
+        if (count === 2) return style.twoImages;
+        if (count === 3) return style.threeImages;
+        if (count === 4) return style.fourImages;
+        return style.manyImages;
+    };
+
+    const handleImageClick = (img_data, index) => {
+        if (onImageClick) {
+            onImageClick(postId, img_data, index);
+        } else if (postId) {
+            navigate(`/post/${postId}`);
+        }
+    };
+
     return (
         <div className={style.postcard}>
             <div className={style.postheading}>
@@ -12,11 +33,24 @@ function PostCard({authorname, posttitle, postdescription="", img_list=[]}){
             <div className={style.postcontent}>
                 <div className={style.posttitle}>{posttitle}</div>
                 <div className={style.postdescription}>{postdescription}</div>
-                {img_list.map((img_data)=>
-                (<div className="postimage">
-                    <img src={img_data.url} alt="" />
-                </div>)
-                )}
+                <div className={`${style.imageGrid} ${getGridClass()}`}>
+                    {images.slice(0, count === 1 ? 1 : 4).map((img_data, index) => (
+                        <div key={index} className={style.imageWrapper}>
+                            <img 
+                                src={img_data.url} 
+                                alt="" 
+                                className={style.postimage} 
+                                onClick={() => handleImageClick(img_data, index)}
+                                style={{ cursor: 'pointer' }}
+                            />
+                            {index === 3 && count > 4 && (
+                                <div className={style.moreOverlay}>
+                                    <span>+{count - 4}</span>
+                                </div>
+                            )}
+                        </div>
+                    ))}
+                </div>
             </div>
             <div className={style.postfooter}>
                 <div className={style.reactionbuttons}>

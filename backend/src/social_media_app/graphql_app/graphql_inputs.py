@@ -39,8 +39,17 @@ class UserPostInput:
     title:str
     description: Optional[str]=None
     visibility: Visibility
-    alt: str
-    image: List[Upload] # Use the Upload scalar for the image file
+    alt: Optional[str] = None
+    image: Optional[List[Upload]] = strawberry.UNSET # Use the Upload scalar for the image file
+
+@strawberry.input
+class UpdatePostInput:
+    id: int
+    title: Optional[str] = strawberry.UNSET
+    description: Optional[str] = strawberry.UNSET
+    visibility: Optional[Visibility] = strawberry.UNSET
+    alt: Optional[str] = strawberry.UNSET
+    image: Optional[List[Upload]] = strawberry.UNSET
 
 @strawberry.input
 class PostFilterInput:

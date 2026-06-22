@@ -20,12 +20,130 @@
     margin-bottom: 0;
     display: flex;
 }
-.navbar ul li>a{
+.navbar ul li>a,
+.navbar ul li>button {
     padding-right: 1em;
     text-decoration: none;
     color: black;
+    background:none;
+    border:none;
+    cursor:pointer;
+    font: inherit;
 }
+.searchbox {
+    position: relative;
+    width: 20em;
+}
+
 .searchbox input[type="text"]{
-    width: 15em;
+    width: 100%;
     font-size: 16px;
+}
+
+.searchWrapper {
+    position: relative;
+    width: 100%;
+}
+
+.searchInputField {
+    width: 100%;
+    padding: 0.5rem 1rem;
+    border: 1px solid #d1d5db;
+    border-radius: 0.5rem;
+    font-size: 0.9rem;
+    transition: border-color 0.2s;
+}
+
+.searchInputField:focus {
+    outline: none;
+    border-color: #2563eb;
+    box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+}
+
+.resultsDropdown {
+    position: absolute;
+    top: 100%;
+    left: 0;
+    right: 0;
+    margin-top: 0.5rem;
+    background: white;
+    border: 1px solid #e5e7eb;
+    border-radius: 0.5rem;
+    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+    max-height: 400px;
+    overflow-y: auto;
+    z-index: 100;
+}
+
+.loadingMessage,
+.noResults,
+.errorMessage {
+    padding: 1rem;
+    text-align: center;
+    color: #6b7280;
+    font-size: 0.9rem;
+}
+
+.errorMessage {
+    color: #b91c1c;
+}
+
+.resultsList {
+    display: flex;
+    flex-direction: column;
+}
+
+.resultCard {
+    padding: 0.75rem 1rem;
+    border: none;
+    background: white;
+    text-align: left;
+    cursor: pointer;
+    transition: background-color 0.15s;
+    border-bottom: 1px solid #f3f4f6;
+}
+
+.resultCard:last-child {
+    border-bottom: none;
+}
+
+.resultCard:hover {
+    background-color: #f9fafb;
+}
+
+.resultCard:active {
+    background-color: #f3f4f6;
+}
+
+.resultHeader {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 0.25rem;
+}
+
+.resultName {
+    font-weight: 700;
+    color: #111827;
+    font-size: 0.95rem;
+}
+
+.resultStatus {
+    font-size: 0.75rem;
+    padding: 0.25rem 0.5rem;
+    background-color: #e0f2fe;
+    color: #0369a1;
+    border-radius: 0.25rem;
+    text-transform: capitalize;
+}
+
+.resultUsername {
+    font-size: 0.85rem;
+    color: #6b7280;
+    margin-bottom: 0.25rem;
+}
+
+.resultEmail {
+    font-size: 0.8rem;
+    color: #9ca3af;
 }

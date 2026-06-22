@@ -43,6 +43,7 @@ def generate_secure_imgproxy_url(source_uri: str, width: int, height: int, exten
 class MediaNode(relay.Node):
     id: relay.NodeID[int]
     name: str
+    type: str
     # public_image_url: str
 
     # Dynamically build the imgproxy links on demand
@@ -108,5 +109,6 @@ class MediaNode(relay.Node):
         logger.info('exit')
         return MediaNode(id=db_user.id,
             name=db_user.name,
+            type=db_user.type.value,
             # public_image_url=db_user.public_image_url
         )

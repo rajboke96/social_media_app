@@ -1,7 +1,14 @@
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import MainLayout from './layouts/MainLayout/MainLayout';
 import ProfileLayout from './layouts/ProfileLayout/ProfileLayout';
-import {Feeds} from './pages/feeds';
+import { Feeds } from './pages/feeds';
+import LoginPage from './pages/auth/LoginPage';
+import SignupPage from './pages/auth/SignupPage';
+import PostViewer from './pages/postViewer/PostViewer';
+import RequireAuth from './features/auth/RequireAuth';
+import { ApolloProvider } from '@apollo/client/react';
+import { authClient, appClient } from './lib/authApolloClient';
+import { Outlet } from 'react-router-dom';
 
 // Simple Page Components
 const Home = () => (
@@ -26,28 +33,47 @@ function App() {
   return (
     <BrowserRouter>
       <Routes>
-        {/* MainLayout wraps all these routes */}
-        <Route path="/" element={<MainLayout />}>
-          <Route index element={<Home />} /> {/* "index" means path="/" */}
-          <Route path="dashboard" element={<Dashboard />} />
-          <Route path="settings" element={<Settings />} />
-          <Route path="feeds" element={<Feeds />} />
+        
+        {/* 🔐 AUTH CLIENT ROUTES */}
+        {/* We use an empty layout route element to safely inject the provider inside <Routes> */}
+        <Route element={<ApolloProvider client={authClient}><Outlet /></ApolloProvider>}>
+          <Route path="/login" element={<LoginPage />} />
+          <Route path="/signup" element={<SignupPage />} />
+        </Route>
+
+        {/* 📦 APP CLIENT ROUTES */}
+        {/* This injects the appClient context to all underlying protected application routes */}
+        <Route element={<ApolloProvider client={appClient}><Outlet /></ApolloProvider>}>
           
-          {/* Catch-all for undefined routes */}
-          <Route path="*" element={<NotFound />} />
-        </Route>
-        {/* The FriendsLayout will always show when the URL starts with /friends */}
-        <Route path="/friends" element={<MainLayout />}>
-            <Route index element={<Friends />} /> {/* path="/friends" */}
-            <Route path="list" element={<AllFriends />} /> {/* path="/friends/all" */}
-            <Route path="requests" element={<FriendRequests />} /> {/* path="/friends/requests" */}
-        </Route>
-        <Route path="/:user_name" element={<ProfileLayout />}>
+          {/* Main Application Layout Routes */}
+          <Route path="/" element={<RequireAuth><MainLayout /></RequireAuth>}>
+            <Route index element={<Home />} />
+            <Route path="dashboard" element={<Dashboard />} />
+            <Route path="settings" element={<Settings />} />
+            <Route path="feeds" element={<Feeds />} />
+            <Route path="post/:postId" element={<PostViewer />} />
+            
+            {/* Catch-all for undefined routes inside MainLayout context */}
+            <Route path="*" element={<NotFound />} />
+          </Route>
+
+          {/* Friends Layout Routes */}
+          <Route path="/friends" element={<RequireAuth><MainLayout /></RequireAuth>}>
+            <Route index element={<Friends />} />
+            <Route path="list" element={<AllFriends />} />
+            <Route path="requests" element={<FriendRequests />} />
+          </Route>
+
+          {/* User Profile Layout Routes */}
+          <Route path="/:user_name" element={<RequireAuth><ProfileLayout /></RequireAuth>}>
             <Route index element={<UserProfileDetails />} />
-            <Route path='about' element={<UserAbout />} />
+            <Route path="about" element={<UserAbout />} />
             <Route path="friends" element={<UserFriends />} />
-            <Route path='photos' element={<UserPhotos />} />
+            <Route path="photos" element={<UserPhotos />} />
+          </Route>
+
         </Route>
+
       </Routes>
     </BrowserRouter>
   );

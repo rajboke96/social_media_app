@@ -1,0 +1,122 @@
+.createPostForm {
+  display: grid;
+  gap: 1rem;
+  background: white;
+  border-radius: 1rem;
+  padding: 1.5rem;
+  box-shadow: 0 12px 36px rgba(15, 23, 42, 0.08);
+  margin-bottom: 1.5rem;
+}
+
+.createPostForm h3 {
+  margin: 0 0 0.5rem;
+}
+
+.createPostForm label {
+  display: grid;
+  gap: 0.5rem;
+  font-size: 0.95rem;
+}
+
+.createPostForm input[type="text"],
+.createPostForm textarea,
+.createPostForm select {
+  width: 100%;
+  padding: 0.9rem 1rem;
+  border: 1px solid #d1d5db;
+  border-radius: 0.75rem;
+  background: #f8fafc;
+}
+
+.createPostForm textarea {
+  min-height: 120px;
+  resize: vertical;
+}
+
+.createPostForm button[type="submit"] {
+  padding: 0.95rem 1.25rem;
+  background: #2563eb;
+  border: none;
+  border-radius: 0.75rem;
+  color: white;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.error {
+  color: #b91c1c;
+  font-size: 0.95rem;
+}
+
+.imageSection {
+  display: grid;
+  gap: 0.5rem;
+}
+
+.imageLabel {
+  font-weight: 500;
+}
+
+.imageGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
+  gap: 0.75rem;
+}
+
+.imageCard {
+  position: relative;
+  aspect-ratio: 1;
+  border-radius: 0.75rem;
+  overflow: hidden;
+  box-shadow: 0 4px 12px rgba(15, 23, 42, 0.08);
+}
+
+.preview {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.removeBtn {
+  position: absolute;
+  top: 0.25rem;
+  right: 0.25rem;
+  width: 1.5rem;
+  height: 1.5rem;
+  border-radius: 50%;
+  background: rgba(239, 68, 68, 0.9);
+  color: white;
+  border: none;
+  font-size: 1rem;
+  line-height: 1;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.removeBtn:hover {
+  background: rgba(220, 38, 38, 1);
+}
+
+.addImageBtn {
+  aspect-ratio: 1;
+  border-radius: 0.75rem;
+  border: 2px dashed #d1d5db;
+  background: #f8fafc;
+  font-size: 1.5rem;
+  color: #64748b;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.addImageBtn:hover {
+  border-color: #2563eb;
+  color: #2563eb;
+}
+
+.hiddenInput {
+  display: none;
+}

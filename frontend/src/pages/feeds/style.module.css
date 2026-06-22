@@ -1,0 +1,24 @@
+.feedsPage {
+  padding: 1rem;
+  margin-top: 4.5rem;
+}
+
+.createPostPrompt {
+  margin-bottom: 1.5rem;
+}
+
+.createPostBtn {
+  width: 100%;
+  padding: 1rem;
+  background: #2563eb;
+  color: white;
+  border: none;
+  border-radius: 0.75rem;
+  font-size: 1rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.createPostBtn:hover {
+  background: #1d4ed8;
+}

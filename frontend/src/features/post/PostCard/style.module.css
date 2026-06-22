@@ -33,3 +33,68 @@
 .reactionbuttons{
     margin-right: auto;
 }
+
+.imageGrid {
+    display: grid;
+    gap: 4px;
+    border-radius: 12px;
+    overflow: hidden;
+    margin-top: 0.5em;
+}
+
+.imageWrapper {
+    position: relative;
+    overflow: hidden;
+    background: #f1f5f9;
+}
+
+.postimage {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+}
+
+.singleImage {
+    grid-template-columns: 1fr;
+    max-height: 500px;
+}
+
+.twoImages {
+    grid-template-columns: 1fr 1fr;
+    max-height: 400px;
+}
+
+.threeImages {
+    grid-template-columns: 1fr 1fr;
+    grid-template-rows: 1fr 1fr;
+    max-height: 450px;
+}
+
+.threeImages .imageWrapper:first-child {
+    grid-row: span 2;
+}
+
+.fourImages {
+    grid-template-columns: 1fr 1fr;
+    grid-template-rows: 1fr 1fr;
+    max-height: 450px;
+}
+
+.manyImages {
+    grid-template-columns: 1fr 1fr;
+    grid-template-rows: 1fr 1fr;
+    max-height: 450px;
+}
+
+.moreOverlay {
+    position: absolute;
+    inset: 0;
+    background: rgba(15, 23, 42, 0.6);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    font-size: 2rem;
+    font-weight: 700;
+}

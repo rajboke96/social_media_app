@@ -19,6 +19,7 @@ async def get_user(db: AsyncSession, username: str):
 
 async def authenticate_user(db: AsyncSession, username: str, password: str):
     user = await get_user(db, username)
+    logger.info("User fetched for authentication: %s", user)
     if not user:
         logger.info('exit')
         return False
