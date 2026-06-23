@@ -1,7 +1,8 @@
-import strawberry
-from social_media_app.schemas import Country, City, State
+from sqlalchemy import select
 from src.logger import get_logger
 logger = get_logger(__name__)
+import strawberry
+from social_media_app.schemas import User, Country, State, City
 
 @strawberry.type
 class UserType:
@@ -29,12 +30,13 @@ class CountryType:
         )
     
     @staticmethod
-    def get(info: strawberry.Info, id):
-        db=info.context.db
-        db_city=db.query(Country).filter(Country.id==id).first()
-        if db_city:
+    async def get(info: strawberry.Info, id):
+        db_factory = info.context.db_factory
+        async with db_factory() as db:
+            result = await db.execute(select(Country).where(Country.id == id))
+            db_country = result.scalar_one_or_none()
             logger.info('exit')
-            return db_city
+            return db_country
 
 @strawberry.type
 class StateType:
@@ -44,12 +46,14 @@ class StateType:
     country: CountryType|None
 
     @staticmethod
-    def get(info: strawberry.Info, id):
-        db=info.context.db
-        db_city=db.query(State).filter(State.id==id).first()
-        if db_city:
+    async def get(info: strawberry.Info, id):
+        from social_media_app.schemas import State
+        db_factory = info.context.db_factory
+        async with db_factory() as db:
+            result = await db.execute(select(State).where(State.id == id))
+            db_state = result.scalar_one_or_none()
             logger.info('exit')
-            return db_city
+            return db_state
 
     @staticmethod
     def from_db(info: strawberry.Info, db_state:State)->"StateType":

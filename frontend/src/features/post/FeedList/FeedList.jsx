@@ -28,6 +28,7 @@ function FeedList(){
                     <div key={edge.node.id} className={style.postcontainer}>
                         <PostCard 
                         authorname={edge.node.createdBy.name || edge.node.createdBy.username} 
+                        authorUsername={edge.node.createdBy.username}
                         posttitle={edge.node.title}
                         postdescription={edge.node.description}
                         postId={edge.node.id}

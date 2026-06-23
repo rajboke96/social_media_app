@@ -1,4 +1,4 @@
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, Link } from 'react-router-dom';
 import { useQuery } from '@apollo/client/react';
 import { useState } from 'react';
 import { GET_USER_POST } from '../../features/post/graphql/feedQueries';
@@ -29,6 +29,7 @@ function PostViewer() {
   };
 
   const authorName = post.createdBy?.name || post.createdBy?.username || 'Unknown';
+  const authorUsername = post.createdBy?.username;
 
   return (
     <div className={style.container}>
@@ -70,7 +71,11 @@ function PostViewer() {
         <div className={style.infoSection}>
           <div className={style.header}>
             <div className={style.author}>
-              <span className={style.authorName}>{authorName}</span>
+              {authorUsername ? (
+                <Link to={`/${authorUsername}`} className={style.authorName}>{authorName}</Link>
+              ) : (
+                <span className={style.authorName}>{authorName}</span>
+              )}
               <span className={style.time}>{new Date(post.createdAt).toLocaleDateString()}</span>
             </div>
           </div>
@@ -88,7 +93,11 @@ function PostViewer() {
             {post.comments?.length > 0 ? (
               post.comments.map((comment) => (
                 <div key={comment.id} className={style.comment}>
-                  <span className={style.commentUser}>{comment.user?.name || comment.user?.username}</span>
+                  {comment.user?.username ? (
+                    <Link to={`/${comment.user.username}`} className={style.commentUser}>{comment.user?.name || comment.user?.username}</Link>
+                  ) : (
+                    <span className={style.commentUser}>{comment.user?.name || comment.user?.username}</span>
+                  )}
                   <p className={style.commentText}>{comment.text}</p>
                   <span className={style.commentTime}>
                     {new Date(comment.createdAt).toLocaleDateString()}

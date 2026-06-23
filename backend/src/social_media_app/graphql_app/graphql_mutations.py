@@ -1,13 +1,13 @@
 import strawberry
-from .graphql_inputs import UpdateUserInput, UserPostInput, UpdatePostInput, UpdateFriendRequest
+from .graphql_inputs import UpdateUserInput, UserPostInput, UpdatePostInput, UpdateFriendRequest, UpdateProfileInput
 from typing import Optional
-from .graphql_nodes import UserNode, UserPostNode, FriendRequestNode
+from .graphql_nodes import UserNode, UserPostNode, FriendRequestNode, UserProfileNode
 from database import get_db_factory
 from src.logger import get_logger
 logger = get_logger(__name__)
 
 from .context_permissions import IsAuthenticated
-from social_media_app.schemas import Post, FriendRequestStatus, Friend, Media, MediaType
+from social_media_app.schemas import Post, FriendRequestStatus, Friend, Media, MediaType, UserProfile
 from datetime import datetime
 from strawberry import relay
 from datetime import date
@@ -230,3 +230,120 @@ class Mutation:
         response.delete_cookie(key="auth_token")
         logger.info('exit')
         return "Logged out successfully!"
+
+    @strawberry.field(permission_classes=[IsAuthenticated])
+    async def update_user_profile(self, info: strawberry.Info, data: UpdateProfileInput) -> Optional[UserProfileNode]:
+        logger.info('enter update_user_profile')
+        user_id = info.context.user.id
+        db_factory = info.context.db_factory
+        async with db_factory() as db:
+            statement = select(UserProfile).where(UserProfile.user_id == user_id)
+            result = await db.execute(statement)
+            db_profile = result.scalar_one_or_none()
+            
+            if db_profile:
+                if data.profile_bio is not strawberry.UNSET:
+                    db_profile.profile_bio = data.profile_bio
+                if data.cover_pic_img is not strawberry.UNSET:
+                    db_profile.cover_pic_img = data.cover_pic_img
+                if data.profile_pic_img is not strawberry.UNSET:
+                    db_profile.profile_pic_img = data.profile_pic_img
+                if data.city_id is not strawberry.UNSET:
+                    db_profile.city_id = data.city_id
+            else:
+                db_profile = UserProfile(
+                    user_id=user_id,
+                    profile_bio=data.profile_bio if data.profile_bio is not strawberry.UNSET else None,
+                    cover_pic_img=data.cover_pic_img if data.cover_pic_img is not strawberry.UNSET else None,
+                    profile_pic_img=data.profile_pic_img if data.profile_pic_img is not strawberry.UNSET else None,
+                    city_id=data.city_id if data.city_id is not strawberry.UNSET else None,
+                )
+                db.add(db_profile)
+            try:
+                if data.cover_pic_img is not strawberry.UNSET and data.cover_pic_img is not None:
+                    logger.debug("Saving cover picture")
+                    cover_pic = await Mutation._save_media(info, data.cover_pic_img, user_id)
+                    db_profile.cover_pic_img = cover_pic.id if cover_pic else None
+                
+                if data.profile_pic_img is not strawberry.UNSET and data.profile_pic_img is not None:
+                    logger.debug("Saving profile picture")
+                    profile_pic = await Mutation._save_media(info, data.profile_pic_img, user_id)
+                    db_profile.profile_pic_img = profile_pic.id if profile_pic else None
+                logger.debug("Committing database transaction")
+                await db.commit()
+                # await db.refresh(db_profile)
+                await db.refresh(
+                    db_profile, 
+                    attribute_names=["profile_picture", "cover_picture", "user", "city"]
+                )
+                logger.debug('exit from update_profile')
+                return UserProfileNode.from_db(info, db_profile)
+            except Exception as e:
+                logger.error(f"Error updating user profile: {e}")
+                await db.rollback()
+                await Mutation._delete_media(info, data.cover_pic_img, user_id)
+                await Mutation._delete_media(info, data.profile_pic_img, user_id)
+                raise Exception(f"Failed to update user profile: {str(e)}")
+    
+    @staticmethod
+    async def _delete_media(info: strawberry.Info, upload_file, user_id: int):
+        if not upload_file:
+            return None
+        from social_media_app.schemas import Media
+        from database import UPLOAD_DIR
+        import os
+
+        db_factory = info.context.db_factory
+
+        async with db_factory() as db:
+            statement = select(Media).where(Media.uploaded_by == user_id).where(Media.uploaded_to == upload_file)
+            result = await db.execute(statement)
+            media = result.scalar_one_or_none()
+            if media:
+                file_path = media.uploaded_to
+                if os.path.exists(file_path):
+                    os.remove(file_path)
+                await db.delete(media)
+                await db.commit()
+
+    @staticmethod
+    async def _save_media(info: strawberry.Info, upload_file, user_id: int):
+        if not upload_file:
+            return None
+        from social_media_app.schemas import Media
+        from database import UPLOAD_DIR
+        import uuid
+        import os
+        from datetime import datetime
+
+        db_factory = info.context.db_factory
+        allowed_types = ["image/jpeg", "image/png", "image/webp"]
+
+        file_name = upload_file.filename
+        file_content = await upload_file.read()
+        content_type = upload_file.content_type
+
+        if content_type not in allowed_types:
+            raise ValueError(f"File upload failed. Invalid file type for {file_name}. Only jpeg, png, webp allowed")
+        
+        file_ext = file_name.split(".")[-1]
+        file_name = f"{uuid.uuid4()}-{file_name.replace(' ', '_')}"
+        file_path = os.path.join(UPLOAD_DIR, file_name)
+        
+        with open(file_path, "wb") as buffer:
+            buffer.write(file_content)
+
+        media = Media(
+            name=file_name,
+            type=MediaType.IMAGE,
+            uploaded_by=user_id,
+            uploaded_to=file_path,
+            uploaded_at=datetime.utcnow(),
+        )
+
+        async with db_factory() as db:
+            db.add(media)
+            await db.commit()
+            await db.refresh(media)
+        
+        return media

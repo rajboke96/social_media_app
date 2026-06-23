@@ -55,18 +55,23 @@ class OauthProviderType(enum.Enum):
 
 class Friend(Base):
     __tablename__ = "friends"
-    user_id: Mapped[int] = mapped_column(ForeignKey("users.id"), primary_key=True)
-    friend_id: Mapped[int] = mapped_column(ForeignKey("users.id"), primary_key=True)
     
-    # The extra values you want to set
+    user_id: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), primary_key=True)
+    friend_id: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), primary_key=True)
+    
     status: Mapped[FriendRequestStatus] = mapped_column(default=FriendRequestStatus.PENDING)
-    friends_at: Mapped[date] = mapped_column(nullable=True)
+    friends_at: Mapped[Optional[date]] = mapped_column(default=None)
 
-    # Back-populates link back to User
+    # Link back to the user who initiated/owns this side of the record
     user: Mapped["User"] = relationship(
-        foreign_keys=[user_id], back_populates="user_friends"
+        foreign_keys=[user_id], 
+        back_populates="initiated_friends"
     )
-
+    # Link to the user on the receiving end of the relationship record
+    friend_user: Mapped["User"] = relationship(
+        foreign_keys=[friend_id], 
+        back_populates="received_friends"
+    )
 post_media = Table(
     "post_media",
     Base.metadata,
@@ -76,37 +81,49 @@ post_media = Table(
 
 class User(Base):
     __tablename__ = "users"
-    id = Column(Integer, primary_key=True)
-    firstname = Column(String(50))
-    middlename = Column(String(50))
-    Lastname = Column(String(50))
-    dob = Column(Date)
-    gender: Mapped[Optional[Gender]]
-    username = Column(String(50), unique=True, nullable=False)
-    email_address = Column(String(100), unique=True)
+    
+    # This prevents type-checking glitches and unifies migration layouts.
+    id: Mapped[int] = mapped_column(primary_key=True)
+    firstname: Mapped[Optional[str]] = mapped_column(String(50))
+    middlename: Mapped[Optional[str]] = mapped_column(String(50))
+    Lastname: Mapped[Optional[str]] = mapped_column(String(50))
+    dob: Mapped[Optional[date]] = mapped_column(Date)
+    gender: Mapped[Optional[Gender]] = mapped_column()
+    username: Mapped[str] = mapped_column(String(50), unique=True, nullable=False)
+    email_address: Mapped[Optional[str]] = mapped_column(String(100), unique=True)
     email_verified: Mapped[bool] = mapped_column(Boolean, default=False)
-    hashed_password = Column(String(200))
-    oauth_provider: Mapped[Optional[OauthProviderType]]
-    oauth_id=Column(String(200))
+    hashed_password: Mapped[Optional[str]] = mapped_column(String(200))
+    oauth_provider: Mapped[Optional[OauthProviderType]] = mapped_column()
+    oauth_id: Mapped[Optional[str]] = mapped_column(String(200))
+    
     account_type: Mapped[AccountType] = mapped_column(default=AccountType.PRIVATE)
     account_status: Mapped[AccountStatus] = mapped_column(default=AccountStatus.ACTIVE)
-    created_at = Column(DateTime)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
     role: Mapped[UserRole] = mapped_column(default=UserRole.CUSTOMER)
-    # -------------Relationships-------------
-    user_friends: Mapped[list["Friend"]] = relationship(
+    
+    # Traces rows where this user is the 'user_id' (Sent requests / Added entries)
+    initiated_friends: Mapped[List["Friend"]] = relationship(
         primaryjoin="User.id == Friend.user_id",
-        back_populates="user"
+        back_populates="user",
+        cascade="all, delete-orphan"
     )
-    user_profile: Mapped["UserProfile"]=relationship(back_populates="user")
-    posts: Mapped[List["Post"]] = relationship(back_populates="user")
+    # Traces rows where this user is the 'friend_id' (Received requests / Being followed)
+    received_friends: Mapped[List["Friend"]] = relationship(
+        primaryjoin="User.id == Friend.friend_id",
+        back_populates="friend_user",
+        cascade="all, delete-orphan"
+    )
+    
+    # ------------- Core App Relationships -------------
+    user_profile: Mapped[Optional["UserProfile"]] = relationship(back_populates="user", cascade="all, delete-orphan")
+    posts: Mapped[List["Post"]] = relationship(back_populates="user", cascade="all, delete-orphan")
     seen_posts: Mapped[List["PostView"]] = relationship(back_populates="user", cascade="all, delete-orphan")
-    media: Mapped[List["Media"]] = relationship(back_populates="user")
-    setting: Mapped["UserSetting"] = relationship(back_populates="user")
+    media: Mapped[List["Media"]] = relationship(back_populates="user", cascade="all, delete-orphan")
+    setting: Mapped[Optional["UserSetting"]] = relationship(back_populates="user", cascade="all, delete-orphan")
 
     def __repr__(self) -> str:
-        logger.info('exit')
-        return f"User({self.firstname}, {self.username}, {self.dob})"
-
+        return f"<User {self.username} (ID: {self.id})>"
+    
 class UserProfile(Base):
     __tablename__ = "users_profile"
     id = Column(Integer, primary_key=True)

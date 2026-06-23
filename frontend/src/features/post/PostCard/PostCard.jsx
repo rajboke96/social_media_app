@@ -1,7 +1,7 @@
-import { useNavigate } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import style from './style.module.css'
 
-function PostCard({ authorname, posttitle, postdescription="", img_list=[], postId, onImageClick }){
+function PostCard({ authorname, authorUsername, posttitle, postdescription="", img_list=[], postId, onImageClick }){
     const navigate = useNavigate();
     const images = img_list.length > 0 ? img_list : [{ url: "static/images/506302782_9643445375778926_6296838114955530405_n.jpg" }];
     const count = images.length;
@@ -26,7 +26,11 @@ function PostCard({ authorname, posttitle, postdescription="", img_list=[], post
         <div className={style.postcard}>
             <div className={style.postheading}>
                 <div className={style.postauthor}>
-                    <span className={style.authorname}>{authorname}</span>
+                    {authorUsername ? (
+                        <Link to={`/${authorUsername}`} className={style.authorname}>{authorname}</Link>
+                    ) : (
+                        <span className={style.authorname}>{authorname}</span>
+                    )}
                 </div>
                 <button>close</button>
             </div>

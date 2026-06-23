@@ -78,7 +78,7 @@ class UserPostNode(relay.Node):
                 created_at=db_user.created_at,
                 created_by=UserNode.from_db(info, db_user.user),
                 visibility=db_user.visibility.value,
-                media=[await MediaNode.from_db(info, m) for m in db_user.media] if db_user.media else None,
+                media=[MediaNode.from_db(info, m) for m in db_user.media] if db_user.media else None,
                 like_count=like_count,
                 comment_count=comment_count,
                 comments=comments if comments else None

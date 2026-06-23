@@ -30,15 +30,10 @@ function Navbar(){
                     </div>
                     <ul className={style.nav}>
                         <li className={style.navitem}><NavLink to="/">Home</NavLink></li>
-                        <li className={style.navitem}><NavLink to="#">Profile</NavLink></li>
-                        <li className={style.navitem}><NavLink to="/friends">Friends</NavLink></li>
-                        <li className={style.navitem}><NavLink to="#">My Posts</NavLink></li>
-                        <li className={style.navitem}><NavLink to="#">Notifications</NavLink></li>
-                        <li className={style.navitem}>
-                          <button type="button" className={style.logoutButton} onClick={handleLogout}>
+                        <li className={style.navitem}><NavLink to="/profile">Profile</NavLink></li>
+                        <li className={style.navitem}><button className={style.logoutButton} type="button" className={style.logoutButton} onClick={handleLogout}>
                             Logout
-                          </button>
-                        </li>
+                          </button></li>
                     </ul>
                     <div className={style.searchbox}>
                         <SearchBar />

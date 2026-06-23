@@ -55,3 +55,10 @@ class UpdatePostInput:
 class PostFilterInput:
     search: str
     # active_only: bool = True
+
+@strawberry.input
+class UpdateProfileInput:
+    profile_bio: Optional[str] = strawberry.UNSET
+    cover_pic_img: Optional[Upload] = strawberry.UNSET
+    profile_pic_img: Optional[Upload] = strawberry.UNSET
+    city_id: Optional[int] = strawberry.UNSET

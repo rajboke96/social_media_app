@@ -7,7 +7,7 @@ from src.logger import get_logger
 logger = get_logger(__name__)
 
 from strawberry import relay
-from social_media_app.schemas import UserRole, Friend, AccountStatus, AccountType, Gender, Visibility, Theme, MediaType
+from social_media_app.schemas import UserRole, Friend, FriendRequestStatus, AccountStatus, AccountType, Gender, Visibility, Theme, MediaType
 from social_media_app.schemas import User as UserModel, UserProfile, Post
 from .query_inputs import Option
 from sqlalchemy import select, or_, and_, func
@@ -130,17 +130,54 @@ class Query:
         user_id=info.context.user.id
         db_factory=info.context.db_factory
         async with db_factory() as db:
-            statement=select(UserProfile).where(UserProfile.user_id==user_id)
+            statement=select(UserProfile).where(UserProfile.user_id==user_id).options(
+                selectinload(UserProfile.profile_picture),
+                selectinload(UserProfile.cover_picture),
+                selectinload(UserProfile.user),
+                selectinload(UserProfile.city)
+            )
             result=await db.execute(statement)
             user_profile=result.scalar_one_or_none()
             logger.info('exit')
-            return user_profile
+            return UserProfileNode.from_db(info, user_profile) if user_profile else None
+
+    @strawberry.field(permission_classes=[IsAuthenticated])
+    async def get_user_profile(self, info: strawberry.Info, user_name: str) -> Optional[UserProfileNode]:
+        logger.info('enter get_user_profile')
+        db_factory = info.context.db_factory
+        async with db_factory() as db:
+            user_stmt = select(UserModel).where(UserModel.username == user_name)
+            user_result = await db.execute(user_stmt)
+            db_user = user_result.scalar_one_or_none()
+            if not db_user:
+                logger.info('exit')
+                return None
+            
+            profile_stmt = select(UserProfile).where(UserProfile.user_id == db_user.id).options(
+                selectinload(UserProfile.profile_picture),
+                selectinload(UserProfile.cover_picture),
+                selectinload(UserProfile.user),
+                selectinload(UserProfile.city)
+            )
+            profile_result = await db.execute(profile_stmt)
+            db_profile = profile_result.scalar_one_or_none()
+            logger.info('exit')
+            return UserProfileNode.from_db(info, db_profile) if db_profile else None
     
     # @relay.connection(graphql_type=relay.ListConnection[UserPostNode], max_results=10, permission_classes=[IsAuthenticated])
     @strawberry.field(permission_classes=[IsAuthenticated])
-    async def UsersPostConnection(self, info: strawberry.Info, first: Optional[int] = 10, after: Optional[str] = None)->relay.ListConnection[UserPostNode]:
+    async def UsersPostConnection(self, info: strawberry.Info, first: Optional[int] = 10, after: Optional[str] = None, user_id: Optional[int] = None, username: Optional[str] = None)->relay.ListConnection[UserPostNode]:
         logger.info('enter UsersPostConnection')
-        user_id=info.context.user.id
+        target_user_id = user_id
+        if not target_user_id and username:
+            db_factory = info.context.db_factory
+            async with db_factory() as db:
+                user_stmt = select(UserModel).where(UserModel.username == username)
+                user_result = await db.execute(user_stmt)
+                db_user = user_result.scalar_one_or_none()
+                target_user_id = db_user.id if db_user else None
+        if not target_user_id:
+            target_user_id = info.context.user.id
         db=info.context.db
 
         db_factory = info.context.db_factory
@@ -152,7 +189,7 @@ class Query:
             # 3. Compile your database statement cleanly
             statement = (
                 select(Post)
-                .where(Post.created_by==user_id)
+                .where(Post.created_by==target_user_id)
                 .options(selectinload(Post.user), selectinload(Post.media))
                 .offset(sql_offset)
                 .limit(sql_limit)
@@ -175,9 +212,18 @@ class Query:
 
     # @relay.connection(graphql_type=relay.ListConnection[FriendRequestNode], max_results=10, permission_classes=[IsAuthenticated])
     @strawberry.field(permission_classes=[IsAuthenticated])
-    async def UserFriendsConnection(self, info: strawberry.Info, first: Optional[int] = 10, after: Optional[str] = None)->relay.ListConnection[FriendRequestNode]:
+    async def UserFriendsConnection(self, info: strawberry.Info, first: Optional[int] = 10, after: Optional[str] = None, user_id: Optional[int] = None, username: Optional[str] = None)->relay.ListConnection[FriendRequestNode]:
         logger.info('enter UserFriendsConnection')
-        user_id=info.context.user.id
+        target_user_id = user_id
+        if not target_user_id and username:
+            db_factory = info.context.db_factory
+            async with db_factory() as db:
+                user_stmt = select(UserModel).where(UserModel.username == username)
+                user_result = await db.execute(user_stmt)
+                db_user = user_result.scalar_one_or_none()
+                target_user_id = db_user.id if db_user else None
+        if not target_user_id:
+            target_user_id = info.context.user.id
         db=info.context.db
         db_factory=info.context.db_factory
         async with db_factory() as db:
@@ -185,15 +231,16 @@ class Query:
             sql_limit = min(first, 50) if first else 10  # Protection ceiling
             statement = (
                 select(Friend)
-                .where(Friend.user_id==user_id)
+                .where(Friend.user_id==target_user_id, Friend.status==FriendRequestStatus.ACCEPTED)
+                .options(selectinload(Friend.user), selectinload(Friend.friend))
                 .offset(sql_offset)
                 .limit(sql_limit)
             )
             # 4. Await the DB result asynchronously over the network loop
             result = await db.execute(statement)
-            user_posts = result.scalars().all()
+            friends = result.scalars().all()
             
-            nodes = [UserPostNode.from_db(post) for post in user_posts]
+            nodes = [FriendRequestNode.from_db(info, f) for f in friends]
             # 7. CRITICAL FIX: Hand-deliver a pre-calculated connection package
             # This prevents Strawberry from triggering background database tasks
             logger.info('exit')
@@ -263,6 +310,62 @@ class Query:
                 return None
             logger.info('exit')
             return await UserPostNode.from_db(info, post)
+
+    @strawberry.field(permission_classes=[IsAuthenticated])
+    async def get_user_profile(self, info: strawberry.Info, user_name: str) -> Optional[UserProfileNode]:
+        logger.info('enter get_user_profile')
+        db_factory = info.context.db_factory
+        async with db_factory() as db:
+            user_stmt = select(UserModel).where(UserModel.username == user_name)
+            user_result = await db.execute(user_stmt)
+            db_user = user_result.scalar_one_or_none()
+            if not db_user:
+                logger.info('exit')
+                return None
+            
+            profile_stmt = select(UserProfile).where(UserProfile.user_id == db_user.id).options(
+                selectinload(UserProfile.profile_picture),
+                selectinload(UserProfile.cover_picture),
+                selectinload(UserProfile.user),
+                selectinload(UserProfile.city)
+            )
+            profile_result = await db.execute(profile_stmt)
+            db_profile = profile_result.scalar_one_or_none()
+            logger.info('exit')
+            return UserProfileNode.from_db(info, db_profile) if db_profile else None
+
+    @strawberry.field(permission_classes=[IsAuthenticated])
+    async def get_user_by_username(self, info: strawberry.Info, username: str) -> Optional[UserNode]:
+        logger.info('enter get_user_by_username')
+        db_factory = info.context.db_factory
+        async with db_factory() as db:
+            statement = select(UserModel).where(UserModel.username == username)
+            result = await db.execute(statement)
+            db_user = result.scalar_one_or_none()
+            logger.info('exit')
+            return UserNode.from_db(info, db_user) if db_user else None
+
+    @strawberry.field(permission_classes=[IsAuthenticated])
+    async def get_user_friends_count(self, info: strawberry.Info, user_id: int) -> int:
+        logger.info('enter get_user_friends_count')
+        db_factory = info.context.db_factory
+        async with db_factory() as db:
+            statement = select(Friend).where(Friend.user_id == user_id, Friend.status == FriendRequestStatus.ACCEPTED)
+            result = await db.execute(statement)
+            friends = result.scalars().all()
+            logger.info('exit')
+            return len(friends)
+
+    @strawberry.field(permission_classes=[IsAuthenticated])
+    async def get_user_posts_count(self, info: strawberry.Info, user_id: int) -> int:
+        logger.info('enter get_user_posts_count')
+        db_factory = info.context.db_factory
+        async with db_factory() as db:
+            statement = select(Post).where(Post.created_by == user_id)
+            result = await db.execute(statement)
+            posts = result.scalars().all()
+            logger.info('exit')
+            return len(posts)
 
     @strawberry.field
     def get_options(self, option: Option)->List[str]:

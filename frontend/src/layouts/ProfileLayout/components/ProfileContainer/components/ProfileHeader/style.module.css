@@ -88,3 +88,118 @@
     padding: 0;
     margin: 0;
 }
+
+.emptyProfile {
+    width: 75vw;
+    margin: 0 auto;
+}
+
+.emptyCover {
+    width: 100%;
+    height: 50vh;
+    border-radius: 20px;
+    background: linear-gradient(135deg, #e2e8f0, #cbd5e1);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 1rem;
+    margin-bottom: 2rem;
+}
+
+.emptyCoverText {
+    font-size: 1.5rem;
+    color: #64748b;
+    font-weight: 600;
+}
+
+.emptySummary {
+    display: flex;
+    align-items: center;
+    gap: 1.5rem;
+    padding: 0 2rem;
+}
+
+.emptyAvatar {
+    width: 168px;
+    height: 168px;
+    border-radius: 100px;
+    background: #cbd5e1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.emptyAvatarText {
+    font-size: 3rem;
+    color: #64748b;
+    font-weight: 700;
+}
+
+.emptyInfo {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+.emptyName {
+    font-size: 2rem;
+    font-weight: 700;
+    color: #1e293b;
+    margin: 0;
+}
+
+.emptyHint {
+    color: #64748b;
+    font-size: 1rem;
+    margin: 0;
+}
+
+.emptyActions {
+    display: flex;
+    gap: 0.75rem;
+    margin-top: 0.5rem;
+}
+
+.primaryBtn {
+    padding: 0.6rem 1.2rem;
+    background: #2563eb;
+    color: white;
+    border: none;
+    border-radius: 0.5rem;
+    font-weight: 600;
+    cursor: pointer;
+}
+
+.primaryBtn:hover {
+    background: #1d4ed8;
+}
+
+.secondaryBtn {
+    padding: 0.6rem 1.2rem;
+    background: white;
+    color: #2563eb;
+    border: 1px solid #2563eb;
+    border-radius: 0.5rem;
+    font-weight: 600;
+    cursor: pointer;
+}
+
+.secondaryBtn:hover {
+    background: #eff6ff;
+}
+
+.addBtn {
+    padding: 0.6rem 1.2rem;
+    background: white;
+    color: #1e293b;
+    border: 1px solid #94a3b8;
+    border-radius: 0.5rem;
+    font-weight: 600;
+    cursor: pointer;
+}
+
+.addBtn:hover {
+    background: #f8fafc;
+    border-color: #64748b;
+}

@@ -105,7 +105,7 @@ class MediaNode(relay.Node):
             return db_user
     
     @staticmethod
-    async def from_db(info: strawberry.Info, db_user:Media)->"MediaNode":
+    def from_db(info: strawberry.Info, db_user:Media)->"MediaNode":
         logger.info('exit')
         return MediaNode(id=db_user.id,
             name=db_user.name,
