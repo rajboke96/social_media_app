@@ -32,7 +32,7 @@ function PostCard({ authorname, authorUsername, posttitle, postdescription="", i
                         <span className={style.authorname}>{authorname}</span>
                     )}
                 </div>
-                <button>close</button>
+                {/* <button>close</button> */}
             </div>
             <div className={style.postcontent}>
                 <div className={style.posttitle}>{posttitle}</div>

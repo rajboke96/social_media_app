@@ -25,9 +25,7 @@ function LoginForm() {
         mutation: LOGIN_MUTATION,
         variables: { data: { username: form.username, password: form.password } },
       });
-      console.log("22222222222")
       navigate('/');
-      console.log("1111111111")
     } catch (e) {
       setError(e.message || 'Login failed');
       console.error(e);

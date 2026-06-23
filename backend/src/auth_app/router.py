@@ -1,5 +1,6 @@
 # app/auth/router.py
 from fastapi import APIRouter, Request, Response, Depends, HTTPException
+from fastapi.responses import RedirectResponse
 from src.logger import get_logger
 logger = get_logger(__name__)
 
@@ -10,6 +11,7 @@ from auth_app.security import create_access_token
 from sqlalchemy.ext.asyncio import AsyncSession
 
 router = APIRouter()
+import os
 
 # --- GOOGLE ROUTES ---
 
@@ -42,16 +44,20 @@ async def callback_google(response: Response, request: Request, db = Depends(get
             # Generate your independent system JWT 
             token = create_access_token(data={"sub": str(user.username)})
             
-            # Set the HttpOnly cookie
+            redirect_url = f"{os.environ.get('FRONTEND_URL', 'http://localhost:5173')}/"
+            response = RedirectResponse(url=redirect_url)
+            
+            # --- Attach the cookie directly to this object ---
             response.set_cookie(
                 key="auth_token",
                 value=token,
                 httponly=True,
-                secure=False,   # Required for HTTPS (Production)
-                samesite="lax" # Change to "none" if frontend/backend are on different domains
+                secure=False,   # Keep False for localhost, change to True for Production HTTPS
+                samesite="lax"  # If frontend is port 5173 and backend is 8000, "lax" works as they share localhost
             )
+            
             logger.info('exit')
-            return f"User {user.username} logged in!"
+            return response # Return the prepared response object
         except Exception as e:
             logger.error('Error in Google OAuth callback: %s', e, exc_info=True)
             raise HTTPException(status_code=400, detail=f"Authentication error: {str(e)}")
